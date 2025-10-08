@@ -1,4 +1,5 @@
-import type { FunctionTool } from "openai/resources/responses/responses.mjs";
+import type { FunctionTool, ResponseCustomToolCallOutput } from "openai/resources/responses/responses.mjs";
+import type { OthelloBoard } from "othello-game";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
@@ -44,3 +45,81 @@ export const showBoardTool: FunctionTool = {
   parameters: zodToJsonSchema(EmptyObjectSchema),
   strict: true,
 };
+
+
+type FunctionCallResult = {
+  functionResult: ResponseCustomToolCallOutput;
+  displayOutput: Generator<string> | null;
+};
+
+export async function handleFunctionCall(
+  item: { name: string; call_id: string; arguments: string },
+  board: OthelloBoard,
+): Promise<FunctionCallResult> {
+  let functionResult: ResponseCustomToolCallOutput;
+  let displayOutput: Generator<string> | null = null;
+
+  switch (item.name) {
+    case resetBoardTool.name:
+      board.reset();
+      functionResult = {
+        type: "custom_tool_call_output",
+        call_id: item.call_id,
+        output: "ok",
+      };
+      break;
+    case getValidMovesTool.name:
+      const moves = board.getValidMoves();
+      const boardWithMoves = {
+        ...moves,
+        board: board.toString(),
+        currentPlayer: board.getCurrentPlayer(),
+        stats: board.getGameStatistics(),
+      };
+      functionResult = {
+        type: "custom_tool_call_output",
+        call_id: item.call_id,
+        output: JSON.stringify(boardWithMoves),
+      };
+      break;
+    case tryApplyMoveTool.name:
+      let position: Position;
+      try {
+        position = await PositionSchema.parseAsync(JSON.parse(item.arguments));
+      } catch (error) {
+        functionResult = {
+          type: "custom_tool_call_output",
+          call_id: item.call_id,
+          output: `ERROR: ${error}`,
+        };
+        break;
+      }
+      functionResult = {
+        type: "custom_tool_call_output",
+        call_id: item.call_id,
+        output: board.tryApplyMove(position) ? "ok" : "Invalid move",
+      };
+      break;
+    case showBoardTool.name:
+      displayOutput = (function* () {
+        yield "\n\n";
+        yield board.toFormattedString();
+        yield "\n";
+      })();
+      functionResult = {
+        type: "custom_tool_call_output",
+        call_id: item.call_id,
+        output: `ok`,
+      };
+      break;
+    default:
+      functionResult = {
+        type: "custom_tool_call_output",
+        call_id: item.call_id,
+        output: `ERROR: Unknown function call: ${item.name}`,
+      };
+      break;
+  }
+
+  return { functionResult, displayOutput };
+}
