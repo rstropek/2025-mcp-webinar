@@ -1,0 +1,25 @@
+{
+  "name": "mcp_mylittlepony",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "dev:no-sdk": "tsx watch src/server-no-sdk.ts",
+    "dev:sdk": "tsx watch src/server-sdk.ts",
+    "dev:sampling": "tsx watch src/server-sampling.ts",
+    "build": "tsc && cp -r src/data build/"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "module",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.19.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
