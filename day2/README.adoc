@@ -1,0 +1,214 @@
+= My Little Pony MCP Server Examples
+:author: Software Architects
+:version: 1.0.0
+:toc: left
+:toclevels: 3
+:sectnums:
+:icons: font
+:source-highlighter: highlight.js
+:highlight-theme: github
+
+== Overview
+
+This repository contains three different implementations of Model Context Protocol (MCP) servers that generate passwords using My Little Pony character names. Each implementation demonstrates different approaches to building MCP servers, from manual JSON-RPC handling to full SDK usage with advanced features.
+
+== Features
+
+* **Password Generation**: Creates secure passwords using My Little Pony character names
+* **Multiple Implementations**: Three different server approaches for learning purposes
+* **VS Code Integration**: Ready-to-use MCP servers for GitHub Copilot and Claude Desktop
+* **TypeScript**: Fully typed implementations with modern ES modules
+* **Flexible Configuration**: Customizable password length and special character substitution
+
+== Server Implementations
+
+=== 1. Manual Implementation (`no-sdk`)
+
+The most basic implementation that manually handles JSON-RPC protocol without using the MCP SDK.
+
+**Features:**
+
+* Raw JSON-RPC message handling
+* Single tool: `pony_password`
+* Manual protocol implementation
+* Minimal dependencies
+
+**Use Case:** Understanding the underlying MCP protocol mechanics
+
+=== 2. SDK Implementation (`sdk`)
+
+Full-featured implementation using the official MCP SDK with comprehensive tooling.
+
+**Features:**
+
+* Multiple tools: `pony_password` and `pony_password_batch`
+* Interactive prompts with completion support
+* Resource management for pony character data
+* Structured output schemas
+* File-based pony data loading
+
+**Use Case:** Production-ready MCP server development
+
+=== 3. Sampling Implementation (`sampling`)
+
+Advanced implementation that uses LLM sampling to generate pony names dynamically.
+
+**Features:**
+
+* Dynamic pony name generation via LLM sampling
+* Runtime data generation
+* Model preference configuration
+
+**Use Case:** Demonstrating MCP's sampling capabilities
+
+== Installation
+
+=== Prerequisites
+
+* Node.js 18+ 
+* npm
+* TypeScript knowledge (for development)
+
+=== Setup
+
+[source,bash]
+----
+# Clone the repository
+git clone https://github.com/software-architects/2025-mcp-webinar.git
+cd 2025-mcp-webinar/day2
+
+# Install dependencies
+npm install
+----
+
+== Usage
+
+=== Development Mode
+
+Run any of the three implementations in development mode:
+
+[source,bash]
+----
+# Manual implementation
+npm run dev:no-sdk
+
+# SDK implementation  
+npm run dev:sdk
+
+# Sampling implementation
+npm run dev:sampling
+----
+
+=== VS Code Integration
+
+To use these servers with GitHub Copilot in VS Code:
+
+1. **Install MCP Extension**: Install the MCP extension for VS Code
+
+2. **Add Server via Command Palette**: 
+   * Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
+   * Search for "MCP: Add Server..."
+   * Select "Command (stdio)" as the transport type
+   * Configure the server with the appropriate command and arguments
+
+3. **Configure Server**: Add server configuration to your VS Code settings (see example below)
+
+4. **Restart VS Code**: Restart VS Code to load the new MCP server
+
+5. **Test Integration**: Use GitHub Copilot and try commands like "Generate a pony password"
+
+**Configuration Example for TypeScript files:**
+[source,json]
+----
+{
+  "mcp.servers": {
+    "pony-password-sdk": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "tsx",
+        "/path/to/your/project/src/server-sdk.ts"
+      ]
+    }
+  }
+}
+----
+
+== API Reference
+
+=== Tools
+
+==== pony_password
+
+Generates a single password using My Little Pony character names.
+
+**Parameters:**
+
+* `minLength` (number, default: 16): Minimum password length
+* `special` (boolean, default: false): Enable special character substitution
+
+**Character Substitutions:**
+
+* `o/O` → `0`
+* `i/I` → `!`
+* `e/E` → `€`
+* `s/S` → `$`
+
+**Example:**
+[source,json]
+----
+{
+  "name": "pony_password",
+  "arguments": {
+    "minLength": 20,
+    "special": true
+  }
+}
+----
+
+==== pony_password_batch
+
+Generates multiple passwords with the same configuration.
+
+**Parameters:**
+
+* `count` (number, 1-50, default: 5): Number of passwords to generate
+* `minLength` (number, default: 16): Minimum password length
+* `special` (boolean, default: false): Enable special character substitution
+
+==== pony_password_sampled
+
+Generates passwords using dynamically sampled pony names from an LLM.
+
+**Parameters:**
+
+* `count` (number, 1-50, default: 5): Number of passwords to generate
+* `minLength` (number, default: 16): Minimum password length
+* `special` (boolean, default: false): Enable special character substitution
+
+**Returns:**
+
+* `result`: Array of generated passwords
+* `usedNames`: Array of pony names used in generation
+
+=== Prompts
+
+==== make-pony-password
+
+Interactive prompt for creating pony-based passwords with completion support.
+
+**Parameters:**
+
+* `minLength` (completable): Password length with suggestions (8, 12, 16, 20, 24, 32)
+* `special` (completable): Special character substitution (true/false)
+
+=== Resources
+
+==== pony-characters-text
+
+Provides access to the pony character data as a text resource.
+
+**URI:** `pony://characters.txt`
+
+**MIME Type:** `text/plain; charset=utf-8`
