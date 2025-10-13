@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 export type Pony = { first: string; last?: string };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_PATH = path.join(__dirname, "../data/ponies.txt");
+const DATA_PATH = path.join(__dirname, "..", "data", "ponies.txt");
 
 
 export async function loadPoniesFromFile(filePath: string = DATA_PATH): Promise<Pony[]> {
