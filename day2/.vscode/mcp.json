@@ -1,0 +1,26 @@
+{
+	"servers": {
+		"Pony Generator (Sampling)": {
+			"type": "stdio",
+			"command": "node",
+			"args": [
+				"/Users/rstropek/github/2025-mcp-webinar/day2/dist/server-sampling.js"
+			]
+		},
+		"Pony Generator (SDK)": {
+			"type": "stdio",
+			"command": "node",
+			"args": [
+				"/Users/rstropek/github/2025-mcp-webinar/day2/dist/server-sdk.js"
+			]
+		},
+		"Pony Generator (No SDK)": {
+			"type": "stdio",
+			"command": "node",
+			"args": [
+				"/Users/rstropek/github/2025-mcp-webinar/day2/dist/server-no-sdk.js"
+			]
+		}
+	},
+	"inputs": []
+}

@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { buildPassword, buildMany } from "./lib/password-sdk.js";
+import { buildPassword, buildMany } from "./lib/password.js";
 import { completable } from "@modelcontextprotocol/sdk/server/completable.js";
 import { loadPoniesFromFile, toOnePerLine } from './lib/ponies.js';
 
@@ -19,8 +19,8 @@ server.registerTool(
         },
         outputSchema: { result: z.string() }
     },
-    async ({ minLength, special }) => {
-      const ponies = await loadPoniesFromFile();              
+    ({ minLength, special }) => {
+      const ponies = loadPoniesFromFile();              
       const output = buildPassword({ minLength, special }, ponies);
       return {
         content: [{ type: 'text', text: output }],
@@ -42,8 +42,8 @@ server.registerTool(
     },
     outputSchema: { result: z.array(z.string()) }
   },
-  async ({ count, minLength, special }) => {
-    const ponies = await loadPoniesFromFile();   
+  ({ count, minLength, special }) => {
+    const ponies = loadPoniesFromFile();   
     const pwds = buildMany(count, { minLength, special }, ponies);
     return { 
         content: [{ type: "text", text: JSON.stringify(pwds) }], 
@@ -85,7 +85,6 @@ Regeln für Ersetzungen (falls aktiv): o/O→0, i/I→!, e/E→€, s/S→$.`
   })
 );
 
-
 server.registerResource(
   "pony-characters-text",
   "pony://characters.txt",
@@ -94,8 +93,8 @@ server.registerResource(
     description: "Ein Name pro Zeile aus data/ponies.txt (CamelCase, ohne Leerzeichen im Nachnamen).",
     mimeType: "text/plain; charset=utf-8"
   },
-  async (uri) => {
-    const ponies = await loadPoniesFromFile(); 
+  (uri) => {
+    const ponies = loadPoniesFromFile(); 
     const text = toOnePerLine(ponies);
     return { contents: [{ uri: uri.href, text }] };
   }

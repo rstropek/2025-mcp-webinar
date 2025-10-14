@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { buildMany } from "./lib/password-sdk.js";
+import { buildMany } from "./lib/password.js";
 
 const server = new McpServer({ name: "pony-sdk", version: "0.1.0" });
 

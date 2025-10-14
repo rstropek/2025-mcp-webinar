@@ -1,5 +1,6 @@
 import * as readline from "node:readline";
-import { buildPassword } from "./lib/password-no-sdk.js";
+import { buildPassword } from "./lib/password.js";
+import { loadPoniesFromFile } from "./lib/ponies.js";
 
 type JR = { jsonrpc: "2.0"; id?: number | string | null; method?: string; params?: any; result?: any; error?: any };
 
@@ -10,7 +11,7 @@ function handleInitialize(id: JR["id"]) {
   const result = {
     protocolVersion: "2024-11-05",
     serverInfo: { name: "pony-no-sdk", version: "0.1.0" },
-    capabilities: { 
+    capabilities: {
       tools: { listChanged: true },
       prompts: { listChanged: true }
     }
@@ -46,7 +47,8 @@ function handleToolsCall(id: JR["id"], params: any) {
   }
   const minLength = Number(args?.minLength ?? 16);
   const special = Boolean(args?.special ?? false);
-  const pwd = buildPassword({ minLength, special });
+  const ponies = loadPoniesFromFile();
+  const pwd = buildPassword({ minLength, special }, ponies);
   send({ jsonrpc: "2.0", id, result: { content: [{ type: "text", text: pwd }] } });
 }
 
