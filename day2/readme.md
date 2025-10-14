@@ -35,3 +35,7 @@ This example shows how to work with content that is not text. It implements an M
    ```
    Use the playwright mcp server to open http://localhost:3000/ and create a screenshot. Then use the verify-image MCP server to check if the screenshot claims that C# is "awesome".
    ```
+
+### Sample 5: Simple MCP Client
+
+This sample shows how to create an MCP client with _stdio_ transport. It queries the server for the list of tools.
