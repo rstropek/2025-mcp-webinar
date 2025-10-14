@@ -3,13 +3,12 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "dev:no-sdk": "tsx watch src/server-no-sdk.ts",
-    "dev:sdk": "tsx watch src/server-sdk.ts",
-    "dev:sampling": "tsx watch src/server-sampling.ts",
     "build": "tsc && cp -r src/data dist/",
+    "start:server": "tsx ./src/server.ts",
     "start:no-sdk": "npx @modelcontextprotocol/inspector tsx ./src/server-no-sdk.ts",
     "start:sdk": "npx @modelcontextprotocol/inspector tsx ./src/server-sdk.ts",
-    "start:sampling": "npx @modelcontextprotocol/inspector tsx ./src/server-sampling.ts"
+    "start:sampling": "npx @modelcontextprotocol/inspector tsx ./src/server-sampling.ts",
+    "start:verify-image": "npx @modelcontextprotocol/inspector tsx ./src/verify-image.ts"
   },
   "keywords": [],
   "author": "",

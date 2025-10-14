@@ -20,6 +20,13 @@
 			"args": [
 				"/Users/rstropek/github/2025-mcp-webinar/day2/dist/server-no-sdk.js"
 			]
+		},
+		"Verify Image": {
+			"type": "stdio",
+			"command": "node",
+			"args": [
+				"/Users/rstropek/github/2025-mcp-webinar/day2/dist/verify-image.js"
+			]
 		}
 	},
 	"inputs": []
