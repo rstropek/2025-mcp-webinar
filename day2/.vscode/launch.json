@@ -8,6 +8,7 @@
             "name": "Launch via NPM",
             "request": "launch",
             "runtimeArgs": [
+                "run",
                 "start:no-sdk"
             ],
             "runtimeExecutable": "npm",
