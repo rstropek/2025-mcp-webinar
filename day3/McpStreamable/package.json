@@ -1,0 +1,34 @@
+{
+  "name": "mcp_mylittlepony",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc && cp -r src/data dist/",
+    "start:sdk-streamable": "tsx ./src/server-sdk-streamable.ts",
+    "start:sampling-streamable": "tsx ./src/server-sampling-streamable.ts",
+    "start:no-sdk-streamable": "tsx ./src/server-no-sdk-streamable.ts",
+    "start:verify-image-streamable": "tsx ./src/verify-image-streamable.ts",
+    "inspect:sdk-streamable": "npx @modelcontextprotocol/inspector tsx ./src/server-sdk-streamable.ts",
+    "inspect:sampling-streamable": "npx @modelcontextprotocol/inspector tsx ./src/server-sampling-streamable.ts",
+    "inspect:no-sdk-streamable": "npx @modelcontextprotocol/inspector tsx ./src/server-no-sdk-streamable.ts",
+    "inspect:verify-image-streamable": "npx @modelcontextprotocol/inspector tsx ./src/verify-image-streamable.ts",
+    "client:streamable": "tsx ./src/client-streamable.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "module",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@modelcontextprotocol/inspector": "^0.17.1",
+    "@modelcontextprotocol/sdk": "^1.19.1",
+    "express": "^5.1.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.7.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
