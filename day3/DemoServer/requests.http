@@ -1,0 +1,86 @@
+@host = http://localhost:3000
+
+###
+GET {{host}}/ping
+
+###
+# @name init
+# Initialize a new MCP session
+POST {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+    },
+    "clientInfo": {
+      "name": "REST Client",
+      "title": "REST Client in VSCode",
+      "version": "1.0.0"
+    }
+  }
+}
+
+###
+# List tools
+POST {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+Mcp-Session-Id: {{init.response.headers.Mcp-Session-Id}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/list",
+  "params": {
+  }
+}
+
+###
+# Execute a tool
+POST {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+Mcp-Session-Id: {{init.response.headers.Mcp-Session-Id}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "echo-tool",
+    "arguments": {
+      "message": "Hello World!"
+    }
+  }
+}
+
+# Execute a tool
+POST {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+Mcp-Session-Id: {{init.response.headers.Mcp-Session-Id}}
+
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "sum",
+    "arguments": {
+      "a": 10,
+      "b": 10
+    }
+  }
+}
+
+###
+GET {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+Mcp-Session-Id: {{init.response.headers.Mcp-Session-Id}}
