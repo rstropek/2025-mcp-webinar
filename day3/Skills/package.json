@@ -1,0 +1,29 @@
+{
+  "name": "password-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for generating secure random passwords with unique characters",
+  "main": "dist/app.js",
+  "type": "module",
+  "scripts": {
+    "start": "node dist/app.js",
+    "dev": "tsx src/app.ts",
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "inspect": "npx @modelcontextprotocol/inspector tsx src/app.ts"
+  },
+  "keywords": ["mcp", "password", "generator", "security"],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.1",
+    "zod": "^3.25.76"
+  }
+}
