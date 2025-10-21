@@ -1,0 +1,9 @@
+{
+	"servers": {
+		"pony-no-sdk": {
+			"url": "http://127.0.0.1:3002/mcp",
+			"type": "http"
+		}
+	},
+	"inputs": []
+}

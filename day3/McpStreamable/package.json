@@ -5,13 +5,7 @@
   "scripts": {
     "build": "tsc && cp -r src/data dist/",
     "start:sdk-streamable": "tsx ./src/server-sdk-streamable.ts",
-    "start:sampling-streamable": "tsx ./src/server-sampling-streamable.ts",
     "start:no-sdk-streamable": "tsx ./src/server-no-sdk-streamable.ts",
-    "start:verify-image-streamable": "tsx ./src/verify-image-streamable.ts",
-    "inspect:sdk-streamable": "npx @modelcontextprotocol/inspector tsx ./src/server-sdk-streamable.ts",
-    "inspect:sampling-streamable": "npx @modelcontextprotocol/inspector tsx ./src/server-sampling-streamable.ts",
-    "inspect:no-sdk-streamable": "npx @modelcontextprotocol/inspector tsx ./src/server-no-sdk-streamable.ts",
-    "inspect:verify-image-streamable": "npx @modelcontextprotocol/inspector tsx ./src/verify-image-streamable.ts",
     "client:streamable": "tsx ./src/client-streamable.ts"
   },
   "keywords": [],
