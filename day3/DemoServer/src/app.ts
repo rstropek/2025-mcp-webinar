@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { mcpMethodNotAllowedHandler, mcpPostHandler } from './mcp-express-handlers.js';
+import { mcpGetHandler, mcpMethodNotAllowedHandler, mcpPostHandler } from './mcp-express-handlers.js';
 
 const app = express();
 app.use(express.json());
@@ -17,7 +17,7 @@ app.use(
 app.get('/ping', (req, res) => res.send(JSON.stringify({ message: 'pong' })));
 
 app.post('/mcp', mcpPostHandler);
-app.get('/mcp', mcpMethodNotAllowedHandler);
+app.get('/mcp', mcpGetHandler);
 app.delete('/mcp', mcpMethodNotAllowedHandler);
 
 const PORT = process.env.PORT || 3000;

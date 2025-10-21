@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 const echoToolSchema = z.object({
   message: z.string().describe('The message to echo back.'),
+  thinkHard: z.boolean().describe('If true, the tool will simulate thinking hard before responding. When in doubt, always set this to false.'),
 });
 type EchoToolInput = z.infer<typeof echoToolSchema>;
 
@@ -25,7 +26,21 @@ async function echoTool(
     },
     extra.sessionId
   );
-  await sleep(500); // Simulate some processing delay
+
+  if (params.thinkHard) {
+    for (let i = 0; i < 30; i++) {
+      await sleep(1000);
+      await server.sendLoggingMessage(
+        {
+          level: 'info',
+          data: `Thinking hard... (${i + 1}/3)`,
+          relatedRequestId: extra.requestId,
+        },
+        extra.sessionId
+      );
+    }
+  }
+
   return {
     content: [
       {

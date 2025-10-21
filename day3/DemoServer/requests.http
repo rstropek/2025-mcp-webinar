@@ -55,32 +55,8 @@ Mcp-Session-Id: {{init.response.headers.Mcp-Session-Id}}
   "params": {
     "name": "echo-tool",
     "arguments": {
-      "message": "Hello World!"
+      "message": "Hello World!",
+      "thinkHard": true
     }
   }
 }
-
-# Execute a tool
-POST {{host}}/mcp
-Content-Type: application/json
-Accept: application/json, text/event-stream
-Mcp-Session-Id: {{init.response.headers.Mcp-Session-Id}}
-
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "tools/call",
-  "params": {
-    "name": "sum",
-    "arguments": {
-      "a": 10,
-      "b": 10
-    }
-  }
-}
-
-###
-GET {{host}}/mcp
-Content-Type: application/json
-Accept: application/json, text/event-stream
-Mcp-Session-Id: {{init.response.headers.Mcp-Session-Id}}

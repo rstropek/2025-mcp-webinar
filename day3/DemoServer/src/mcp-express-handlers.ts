@@ -97,6 +97,17 @@ export async function mcpPostHandler(req: Request, res: Response) {
   }
 }
 
+export async function mcpGetHandler(req: Request, res: Response) {
+  const sessionId = req.headers['mcp-session-id'];
+  if (!sessionId || !transports[sessionId as string]) {
+    res.status(400).send('Invalid or missing session ID');
+    return;
+  }
+
+  const transport = transports[sessionId as string]!;
+  await transport.handleRequest(req, res);
+}
+
 export function mcpMethodNotAllowedHandler(req: Request, res: Response) {
     res.writeHead(405).end(JSON.stringify(getJsonRpcError(METHOD_NOT_ALLOWED_ERROR)));
 }
