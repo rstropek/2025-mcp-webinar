@@ -1,0 +1,35 @@
+{
+  "name": "mcp_mylittlepony",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc && cp -r src/data dist/",
+    "start": "tsx ./src/server-sdk-streamable.ts",
+    "get-token": "tsx ./scripts/get-token.ts",
+    "example": "tsx ./examples/mcp-oauth-client.ts",
+    "test-token": "tsx ./tests/test-token.ts",
+    "test-mcp-client": "tsx ./tests/test-mcp-client.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "module",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@modelcontextprotocol/inspector": "^0.17.1",
+    "@modelcontextprotocol/sdk": "^1.19.1",
+    "@scalekit-sdk/node": "^2.1.5",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.24.6"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.7.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
