@@ -6,7 +6,6 @@
     "build": "tsc && cp -r src/data dist/",
     "start": "tsx ./src/server-sdk-streamable.ts",
     "get-token": "tsx ./scripts/get-token.ts",
-    "example": "tsx ./examples/mcp-oauth-client.ts",
     "test-token": "tsx ./tests/test-token.ts",
     "test-mcp-client": "tsx ./tests/test-mcp-client.ts"
   },

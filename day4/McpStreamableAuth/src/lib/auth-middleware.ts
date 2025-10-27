@@ -1,11 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import { scalekit, SCALEKIT_CONFIG, WWW_AUTHENTICATE_HEADER } from './scalekit-config.js';
 
+// Extend Express Request to include our custom properties
+declare global {
+  namespace Express {
+    interface Request {
+      token?: string;
+      tokenClaims?: any;
+      isAuthenticated?: boolean;
+    }
+  }
+}
+
 /**
- * Authentication middleware for MCP server endpoints
- * Validates Bearer tokens and enforces OAuth 2.1 authorization
+ * Optional authentication middleware that extracts Bearer tokens without requiring them
+ * This allows the server to know if a user is authenticated, but doesn't block requests
  */
-export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function optionalAuthMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     // Allow public access to well-known endpoints for metadata discovery
     if (req.path.includes('.well-known')) {
@@ -23,63 +34,50 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
       ? authHeader.split('Bearer ')[1]?.trim()
       : null;
 
-    if (!token) {
-      throw new Error('Missing or invalid Bearer token');
+    if (token) {
+      try {
+        // Validate token if present
+        const claims = await scalekit.validateToken(token, {
+          audience: [SCALEKIT_CONFIG.resourceId]
+        });
+
+        // Attach token and claims to request for use by tools
+        req.token = token;
+        req.tokenClaims = claims;
+        req.isAuthenticated = true;
+        console.log('✓ Authenticated request with token');
+      } catch (err) {
+        console.warn('⚠️ Invalid token provided, treating as unauthenticated:', err);
+        req.isAuthenticated = false;
+      }
+    } else {
+      req.isAuthenticated = false;
     }
 
-    // Validate token against configured resource audience
-    await scalekit.validateToken(token, {
-      audience: [SCALEKIT_CONFIG.resourceId]
-    });
-
-    // Token is valid, continue to next middleware
+    // Continue regardless of authentication status
     next();
   } catch (err) {
-    console.error('Authentication failed:', err);
-    res
-      .status(401)
-      .set(WWW_AUTHENTICATE_HEADER.key, WWW_AUTHENTICATE_HEADER.value)
-      .json({
-        error: 'unauthorized',
-        error_description: 'Valid Bearer token required',
-      });
-    return;
+    console.error('Error in optional auth middleware:', err);
+    req.isAuthenticated = false;
+    next();
   }
 }
 
+
 /**
- * Scope validation middleware for specific tools
- * Validates that the token has the required scope for the tool
+ * Validates that a token has the required scope(s)
+ * Throws an error if validation fails
  */
-export function requireScope(requiredScope: string) {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const authHeader = req.headers['authorization'];
-      const token = authHeader?.startsWith('Bearer ')
-        ? authHeader.split('Bearer ')[1]?.trim()
-        : null;
-
-      if (!token) {
-        throw new Error('Missing Bearer token');
-      }
-
-      // Validate token with required scope
-      await scalekit.validateToken(token, {
-        audience: [SCALEKIT_CONFIG.resourceId],
-        requiredScopes: [requiredScope]
-      });
-
-      next();
-    } catch (err) {
-      console.error(`Scope validation failed for scope '${requiredScope}':`, err);
-      res
-        .status(403)
-        .json({
-          error: 'insufficient_scope',
-          error_description: `Required scope: ${requiredScope}`,
-          scope: requiredScope
-        });
-      return;
-    }
-  };
+export async function validateScope(token: string, requiredScopes: string[]): Promise<any> {
+  try {
+    const claims = await scalekit.validateToken(token, {
+      audience: [SCALEKIT_CONFIG.resourceId],
+      requiredScopes: requiredScopes
+    });
+    return claims;
+  } catch (err) {
+    console.error(`Scope validation failed for scopes '${requiredScopes.join(', ')}':`, err);
+    throw err;
+  }
 }
+

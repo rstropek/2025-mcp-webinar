@@ -4,7 +4,8 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { randomUUID } from 'node:crypto';
 import cors from 'cors';
 import { SCALEKIT_CONFIG } from './scalekit-config.js';
-import { authMiddleware } from './auth-middleware.js';
+import { optionalAuthMiddleware } from './auth-middleware.js';
+import { AuthContext, runWithAuthContext } from './auth-context.js';
 
 /**
  * Creates and starts a streamable HTTP server for MCP (Model Context Protocol) communication.
@@ -55,8 +56,9 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
     });
   });
 
-  // Apply authentication middleware to all MCP endpoints
-  app.use('/', authMiddleware);
+  // Apply optional authentication middleware to all MCP endpoints
+  // This extracts tokens if present but doesn't require authentication
+  app.use('/', optionalAuthMiddleware);
 
   // Map to store active transports by session ID for session management
   // This allows the server to reuse existing transports for ongoing sessions
@@ -81,6 +83,7 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
         onsessioninitialized: (sessionId) => {
           // Store the transport for future reuse
           transports[sessionId] = transport;
+          
           // Set the session ID in response header so client knows what to use
           res.setHeader('mcp-session-id', sessionId);
         },
@@ -108,8 +111,18 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
       return;
     }
 
-    // Delegate the actual request handling to the transport
-    await transport.handleRequest(req, res, req.body);
+    // Set up authentication context for this request
+    const authContext: AuthContext = {
+      token: req.token,
+      tokenClaims: req.tokenClaims,
+      isAuthenticated: req.isAuthenticated ?? false,
+      sessionId: sessionId,
+    };
+
+    // Run the transport request handler within the authentication context
+    await runWithAuthContext(authContext, async () => {
+      await transport.handleRequest(req, res, req.body);
+    });
   });
 
   /**
@@ -124,9 +137,19 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
       return;
     }
 
-    // Get the existing transport and delegate request handling
+    // Set up authentication context for this request
+    const authContext: AuthContext = {
+      token: req.token,
+      tokenClaims: req.tokenClaims,
+      isAuthenticated: req.isAuthenticated ?? false,
+      sessionId: sessionId,
+    };
+
+    // Get the existing transport and delegate request handling within auth context
     const transport = transports[sessionId];
-    await transport.handleRequest(req, res);
+    await runWithAuthContext(authContext, async () => {
+      await transport.handleRequest(req, res);
+    });
   };
 
   // Handle GET requests for server-to-client notifications via SSE

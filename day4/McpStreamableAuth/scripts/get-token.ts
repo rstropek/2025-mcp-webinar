@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { getAccessToken, loadOAuthConfigFromEnv } from './src/lib/oauth-client.ts';
+import { getAccessToken, loadOAuthConfigFromEnv } from '../src/lib/oauth-client.ts';
 
 async function getMcpAccessToken() {
   try {

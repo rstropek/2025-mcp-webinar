@@ -1,19 +1,20 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { buildPassword, buildMany } from './lib/password.js';
+import { buildPassword, buildMany, buildPasswordAdvanced, filterPonies } from './lib/password.js';
 import { completable } from '@modelcontextprotocol/sdk/server/completable.js';
 import { loadPoniesFromFile, toOnePerLine } from './lib/ponies.js';
 import { createStreamableHTTPServer } from './lib/streamable-http.js';
-import { SCALEKIT_CONFIG } from './lib/scalekit-config.js';
+import { isAuthenticated, getToken, getTokenClaims } from './lib/auth-context.js';
+import { validateScope } from './lib/auth-middleware.js';
 
 const server = new McpServer({ name: 'pony-sdk-streamable', version: '0.1.0' });
 
-/** Tool 1: Einzel-Passwort */
+/** Public Tool 1: Single Password */
 server.registerTool(
   'pony_password',
   {
-    title: 'Ein Passwort generieren',
-    description: 'Baut ein Passwort aus My-Little-Pony-Charakternamen.',
+    title: 'Generate Password',
+    description: 'Generates a password from My Little Pony character names.',
     inputSchema: {
       minLength: z.number().int().min(1).default(16),
       special: z.boolean().default(false),
@@ -33,8 +34,8 @@ server.registerTool(
 server.registerTool(
   'pony_password_with_preferences',
   {
-    title: 'Ein Passwort generieren',
-    description: 'Baut ein Passwort aus My-Little-Pony-Charakternamen. Der Benutzer kann Ponies, die er nicht mag, ausschließen.',
+    title: 'Generate Password with Preferences',
+    description: 'Generates a password from My Little Pony character names. You can exclude ponies you don\'t like.',
     inputSchema: {
       minLength: z.number().int().min(1).default(16),
       special: z.boolean().default(false),
@@ -72,12 +73,12 @@ server.registerTool(
   }
 );
 
-/** Tool 2: Batch */
+/** Public Tool 2: Batch Generation */
 server.registerTool(
   'pony_password_batch',
   {
-    title: 'Mehrere Passwörter generieren',
-    description: 'Generiert N Passwörter mit denselben Optionen.',
+    title: 'Generate Multiple Passwords',
+    description: 'Generates N passwords with the same options.',
     inputSchema: {
       count: z.number().int().min(1).max(50).default(5),
       minLength: z.number().int().min(1).default(16),
@@ -98,8 +99,8 @@ server.registerTool(
 server.registerPrompt(
   'make-pony-password',
   {
-    title: 'Pony-Passwort erstellen',
-    description: 'Prompt zum Erzeugen eines Passworts aus MLP-Charakternamen',
+    title: 'Create Pony Password',
+    description: 'Prompt for generating a password from MLP character names',
     argsSchema: {
       minLength: completable(z.string(), (val) => [8, 12, 16, 20, 24, 32].filter((n) => String(n).startsWith(String(val ?? ''))).map(String)),
       special: completable(z.string(), (val) => {
@@ -128,14 +129,88 @@ server.registerResource(
   'pony-characters-text',
   'pony://characters.txt',
   {
-    title: 'MLP-Charaktere (Text)',
-    description: 'Ein Name pro Zeile aus data/ponies.txt (CamelCase, ohne Leerzeichen im Nachnamen).',
+    title: 'MLP Characters (Text)',
+    description: 'One name per line from data/ponies.txt (CamelCase, no spaces in last names).',
     mimeType: 'text/plain; charset=utf-8',
   },
   (uri) => {
     const ponies = loadPoniesFromFile();
     const text = toOnePerLine(ponies);
     return { contents: [{ uri: uri.href, text }] };
+  }
+);
+
+/** 
+ * AUTHENTICATED TOOL: Advanced Pony Password Generator
+ * This tool requires authentication and specific permissions to use advanced features
+ */
+server.registerTool(
+  'pony_password_advanced',
+  {
+    title: 'Advanced Hybrid Password Generator (Authenticated)',
+    description: 'Generates strong passwords by mixing ponies with numbers, symbols, and case variations. Requires authentication and pony:password:write permission.',
+    inputSchema: {
+      length: z.number().int().min(8).max(128).default(20),
+      includeNumbers: z.boolean().default(true),
+      includeSymbols: z.boolean().default(true),
+      includeUppercase: z.boolean().default(true),
+      customPonies: z.array(z.string()).optional(),
+    },
+    outputSchema: { 
+      result: z.string(),
+      metadata: z.object({
+        length: z.number(),
+        includedNumbers: z.boolean(),
+        includedSymbols: z.boolean(),
+        includedUppercase: z.boolean(),
+        composition: z.array(z.string()),
+      })
+    },
+  },
+  async ({ length, includeNumbers, includeSymbols, includeUppercase, customPonies }) => {
+    // Check authentication
+    if (!isAuthenticated()) {
+      throw new Error('Authentication required. This tool requires a valid Bearer token.');
+    }
+
+    const token = getToken();
+    if (!token) {
+      throw new Error('Failed to retrieve authentication token.');
+    }
+
+    // Check for required permission
+    try {
+      await validateScope(token, ['pony:password:write']);
+    } catch (err) {
+      throw new Error(`Insufficient permissions. Required scope: pony:password:write`);
+    }
+
+    // Get custom ponies if provided, otherwise use default
+    let ponies = loadPoniesFromFile();
+    if (customPonies && customPonies.length > 0) {
+      ponies = filterPonies(ponies, customPonies);
+      
+      if (ponies.length === 0) {
+        throw new Error('No matching ponies found for the provided custom list.');
+      }
+    }
+
+    // Build advanced hybrid password
+    const result = buildPasswordAdvanced(
+      { length, includeNumbers, includeSymbols, includeUppercase },
+      ponies
+    );
+
+    const claims = getTokenClaims();
+    const username = claims?.sub || claims?.email || 'anonymous';
+    
+    console.log(`✓ Advanced hybrid password generated for authenticated user: ${username}`);
+    console.log(`  Length: ${result.metadata.length}, Composition: ${result.metadata.composition.join(', ')}`);
+    
+    return {
+      content: [{ type: 'text', text: result.result }],
+      structuredContent: result,
+    };
   }
 );
 
