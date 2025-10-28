@@ -5,6 +5,7 @@ import { Scalekit } from '@scalekit-sdk/node';
 export const SCALEKIT_CONFIG = {
   // Your Scalekit environment URL (e.g., https://yourapp.scalekit.com)
   environmentUrl: process.env.SCALEKIT_ENVIRONMENT_URL || 'https://your-app.scalekit.com',
+  authServer: process.env.SCALEKIT_AUTH_SERVER || 'https://your-app.scalekit.com/something',
   
   // Your Scalekit client credentials
   clientId: process.env.SCALEKIT_CLIENT_ID || 'your-client-id',
@@ -15,10 +16,7 @@ export const SCALEKIT_CONFIG = {
   
   // Supported scopes for your MCP server
   supportedScopes: [
-    'pony:password:read',    // Read access to password generation
-    'pony:password:write',   // Write access to password generation
-    'pony:characters:read',  // Read access to pony character data
-    'pony:prompts:read',     // Read access to prompts
+    'password:generate',
   ],
 };
 

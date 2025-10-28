@@ -18,16 +18,6 @@ declare global {
  */
 export async function optionalAuthMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    // Allow public access to well-known endpoints for metadata discovery
-    if (req.path.includes('.well-known')) {
-      return next();
-    }
-
-    // Allow public access to health check endpoint
-    if (req.path === '/health') {
-      return next();
-    }
-
     // Extract Bearer token from Authorization header
     const authHeader = req.headers['authorization'];
     const token = authHeader?.startsWith('Bearer ')
@@ -38,7 +28,8 @@ export async function optionalAuthMiddleware(req: Request, res: Response, next: 
       try {
         // Validate token if present
         const claims = await scalekit.validateToken(token, {
-          audience: [SCALEKIT_CONFIG.resourceId]
+          audience: [SCALEKIT_CONFIG.resourceId],
+          // If necessary, add `requiredScopes` here for tool-specific validation
         });
 
         // Attach token and claims to request for use by tools
