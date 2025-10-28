@@ -12,7 +12,8 @@ export const SCALEKIT_CONFIG = {
   clientSecret: process.env.SCALEKIT_CLIENT_SECRET || 'your-client-secret',
   
   // Your MCP server resource identifier
-  resourceId: process.env.MCP_RESOURCE_ID || 'https://mcp.yourapp.com',
+  prodResourceId: process.env.MCP_RESOURCE_ID || 'https://mcp.yourapp.com',
+  resourceId: process.env.NODE_ENV === 'production' ? process.env.MCP_RESOURCE_ID : 'http://localhost:' + (process.env.PORT || '3000'),
 
   resourceMetadata: process.env.MCP_RESOURCE_METADATA || 'https://mcp.yourapp.com/.well-known/oauth-protected-resource',
   

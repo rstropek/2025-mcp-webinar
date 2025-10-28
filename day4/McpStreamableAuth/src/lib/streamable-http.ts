@@ -56,10 +56,12 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
    *   - 'Mcp-Protocol-Version': MCP protocol version identifier
    *   - 'Content-Type': Required for JSON request bodies
    *   - 'Authorization': OAuth 2.0 Bearer token for authentication
+   *   - 'Mcp-Session-Id': Session identifier for maintaining MCP sessions across requests
    * 
    * - exposedHeaders: Headers that browsers can access in the response
    *   - 'WWW-Authenticate': OAuth challenge information when authentication fails
-   *   - Browsers need explicit permission to read this security-related header
+   *   - 'Mcp-Session-Id': Session identifier returned after initialization
+   *   - Browsers need explicit permission to read these security-related headers
    * 
    * - maxAge: 86400 seconds (24 hours)
    *   - How long browsers can cache the pre-flight OPTIONS response
@@ -70,8 +72,8 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
     origin: (origin, cb) => cb(null, true),
     credentials: false,
     methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Mcp-Protocol-Version', 'Content-Type', 'Authorization'],
-    exposedHeaders: ['WWW-Authenticate'],
+    allowedHeaders: ['Mcp-Protocol-Version', 'Content-Type', 'Authorization', 'Mcp-Session-Id'],
+    exposedHeaders: ['WWW-Authenticate', 'Mcp-Session-Id'],
     maxAge: 86400,
   });
   app.options(/.*/, allowAll); // Technically not needed, but good practice to 
