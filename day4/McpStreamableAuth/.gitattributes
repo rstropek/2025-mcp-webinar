@@ -1,0 +1,45 @@
+# Set default behavior to automatically normalize line endings
+* text=auto eol=lf
+
+# Shell scripts should always use LF
+*.sh text eol=lf
+
+# Windows batch files should use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# TypeScript and JavaScript files
+*.ts text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+
+# Config files
+.env* text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+
+# Documentation
+*.md text eol=lf
+
+# Binaries
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mov binary
+*.mp4 binary
+*.mp3 binary
+*.flv binary
+*.fla binary
+*.swf binary
+*.gz binary
+*.zip binary
+*.7z binary
+*.ttf binary
+*.eot binary
+*.woff binary
+*.woff2 binary
+

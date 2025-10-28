@@ -1,0 +1,40 @@
+Dockerfile
+
+# Dependencies
+node_modules/
+npm-debug.log
+
+# Build output
+dist/
+
+# Git
+.git/
+.gitignore
+
+# Environment files (security - should be provided at runtime)
+.env
+config.env
+
+# Documentation
+*.md
+README*
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.log
+.npm
+
