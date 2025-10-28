@@ -46,7 +46,7 @@ server.registerTool(
       message: 'Which ponies to exclude?',
       requestedSchema: {
         type: 'object',
-        properties: { 
+        properties: {
           excludedPonies: {
             type: 'string',
             title: 'Excluded Ponies',
@@ -149,7 +149,7 @@ server.registerTool(
       includeUppercase: z.boolean().default(true),
       customPonies: z.array(z.string()).optional(),
     },
-    outputSchema: { 
+    outputSchema: {
       result: z.string(),
       metadata: z.object({
         length: z.number(),
@@ -165,7 +165,7 @@ server.registerTool(
     let ponies = loadPoniesFromFile();
     if (customPonies && customPonies.length > 0) {
       ponies = filterPonies(ponies, customPonies);
-      
+
       if (ponies.length === 0) {
         throw new Error('No matching ponies found for the provided custom list.');
       }
@@ -179,10 +179,10 @@ server.registerTool(
 
     const claims = getTokenClaims();
     const username = claims?.sub || claims?.email || 'anonymous';
-    
+
     console.log(`✓ Advanced hybrid password generated for authenticated user: ${username}`);
     console.log(`  Length: ${result.metadata.length}, Composition: ${result.metadata.composition.join(', ')}`);
-    
+
     return {
       content: [{ type: 'text', text: result.result }],
       structuredContent: result,
@@ -205,7 +205,7 @@ server.registerTool(
     if (!isAuthenticated()) {
       return {
         content: [{ type: 'text', text: 'Not authenticated. No token claims available.' }],
-        structuredContent: { 
+        structuredContent: {
           isAuthenticated: false,
         },
       };
@@ -213,10 +213,10 @@ server.registerTool(
 
     const claims = getTokenClaims();
     const claimsText = JSON.stringify(claims, null, 2);
-    
+
     return {
       content: [{ type: 'text', text: `Token Claims:\n${claimsText}` }],
-      structuredContent: { 
+      structuredContent: {
         claims,
         isAuthenticated: true,
       },
@@ -224,6 +224,4 @@ server.registerTool(
   }
 );
 
-
-// Start the server
 createStreamableHTTPServer(server, 'pony-sdk-streamable', '0.1.0', 3000);

@@ -77,7 +77,7 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
     maxAge: 86400,
   });
   app.options(/.*/, allowAll); // Technically not needed, but good practice to 
-                               // explicitly support OPTIONS requests for all routes.
+  // explicitly support OPTIONS requests for all routes.
   app.use(allowAll);
 
   // Configure Express to parse JSON request bodies automatically
@@ -121,7 +121,7 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
       "authorization_servers": [
         SCALEKIT_CONFIG.authServer
       ],
-      
+
       /**
        * bearer_methods_supported: Array of bearer token transmission methods
        * 
@@ -140,7 +140,7 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
       "bearer_methods_supported": [
         "header"
       ],
-      
+
       /**
        * resource: Unique identifier for this protected resource
        * 
@@ -155,12 +155,12 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
        * This prevents token misuse on other resource servers.
        */
       "resource": SCALEKIT_CONFIG.resourceId,
-      
+
       /**
        * resource_documentation: URL to human-readable documentation
        */
       "resource_documentation": `${SCALEKIT_CONFIG.resourceId}/docs`,
-      
+
       /**
        * scopes_supported: Array of OAuth 2.0 scopes recognized by this resource
        * 
@@ -216,7 +216,7 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
         onsessioninitialized: (sessionId) => {
           // Store the transport for future reuse
           transports[sessionId] = transport;
-          
+
           // Set the session ID in response header so client knows what to use
           res.setHeader('mcp-session-id', sessionId);
         },

@@ -44,13 +44,13 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 export interface AuthContext {
   /** The raw JWT access token from the Authorization header */
   token?: string;
-  
+
   /** Parsed and validated claims from the JWT (e.g., sub, email, scopes) */
   tokenClaims?: any;
-  
+
   /** Whether the request has been successfully authenticated */
   isAuthenticated: boolean;
-  
+
   /** Unique session identifier for this MCP session */
   sessionId?: string;
 }

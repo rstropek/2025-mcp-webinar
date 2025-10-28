@@ -30,7 +30,7 @@ export async function requiredAuthMiddleware(req: Request, res: Response, next: 
 
     // Validate token
     const claims = await scalekit.validateToken(token, {
-      audience: [SCALEKIT_CONFIG.prodResourceId],
+      audience: [SCALEKIT_CONFIG.audience],
       // OAuth 2.0 Scopes: Fine-grained permissions for API access control
       // 
       // Scopes allow you to limit what an authenticated user/client can do with their token.
