@@ -8,7 +8,6 @@ import { isAuthenticated, getToken, getTokenClaims } from './lib/auth-context.js
 
 const server = new McpServer({ name: 'pony-sdk-streamable', version: '0.1.0' });
 
-/** Public Tool 1: Single Password */
 server.registerTool(
   'pony_password',
   {
@@ -72,7 +71,6 @@ server.registerTool(
   }
 );
 
-/** Public Tool 2: Batch Generation */
 server.registerTool(
   'pony_password_batch',
   {
@@ -139,10 +137,6 @@ server.registerResource(
   }
 );
 
-/** 
- * AUTHENTICATED TOOL: Advanced Pony Password Generator
- * This tool requires authentication and specific permissions to use advanced features
- */
 server.registerTool(
   'pony_password_advanced',
   {
@@ -167,16 +161,6 @@ server.registerTool(
     },
   },
   async ({ length, includeNumbers, includeSymbols, includeUppercase, customPonies }) => {
-    // Check authentication
-    if (!isAuthenticated()) {
-      throw new Error('Authentication required. This tool requires a valid Bearer token.');
-    }
-
-    const token = getToken();
-    if (!token) {
-      throw new Error('Failed to retrieve authentication token.');
-    }
-
     // Get custom ponies if provided, otherwise use default
     let ponies = loadPoniesFromFile();
     if (customPonies && customPonies.length > 0) {
@@ -205,6 +189,41 @@ server.registerTool(
     };
   }
 );
+
+server.registerTool(
+  'get_token_claims',
+  {
+    title: 'Get Token Claims',
+    description: 'Returns the claims from the JWT authentication token for the current request. Requires authentication.',
+    inputSchema: {},
+    outputSchema: {
+      claims: z.record(z.any()).optional(),
+      isAuthenticated: z.boolean(),
+    },
+  },
+  async () => {
+    if (!isAuthenticated()) {
+      return {
+        content: [{ type: 'text', text: 'Not authenticated. No token claims available.' }],
+        structuredContent: { 
+          isAuthenticated: false,
+        },
+      };
+    }
+
+    const claims = getTokenClaims();
+    const claimsText = JSON.stringify(claims, null, 2);
+    
+    return {
+      content: [{ type: 'text', text: `Token Claims:\n${claimsText}` }],
+      structuredContent: { 
+        claims,
+        isAuthenticated: true,
+      },
+    };
+  }
+);
+
 
 // Start the server
 createStreamableHTTPServer(server, 'pony-sdk-streamable', '0.1.0', 3000);
