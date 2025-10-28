@@ -74,7 +74,6 @@ export function mcpMethodNotAllowedHandler(req: Request, res: Response) {
 
 // Handle POST requests for JSON-RPC
 app.post('/mcp', (req, res) => {
-  const sessionId = req.headers['mcp-session-id'] as string;
   const msg: JR = req.body;
 
   // For initialize requests, we don't require session ID yet
