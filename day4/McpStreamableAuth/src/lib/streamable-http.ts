@@ -4,7 +4,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { randomUUID } from 'node:crypto';
 import cors from 'cors';
 import { SCALEKIT_CONFIG } from './scalekit-config.js';
-import { optionalAuthMiddleware } from './auth-middleware.js';
+import { requiredAuthMiddleware } from './auth-middleware.js';
 import { AuthContext, runWithAuthContext } from './auth-context.js';
 
 /**
@@ -191,9 +191,9 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
     });
   });
 
-  // Apply optional authentication middleware to all MCP endpoints
-  // This extracts tokens if present but doesn't require authentication
-  app.use('/', optionalAuthMiddleware);
+  // Apply mandatory authentication middleware to all MCP endpoints
+  // This requires valid Bearer tokens for all requests
+  app.use('/mcp', requiredAuthMiddleware);
 
   /**
    * Main MCP endpoint handler for JSON-RPC requests.

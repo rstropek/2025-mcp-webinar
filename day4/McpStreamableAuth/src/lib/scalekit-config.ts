@@ -13,6 +13,8 @@ export const SCALEKIT_CONFIG = {
   
   // Your MCP server resource identifier
   resourceId: process.env.MCP_RESOURCE_ID || 'https://mcp.yourapp.com',
+
+  resourceMetadata: process.env.MCP_RESOURCE_METADATA || 'https://mcp.yourapp.com/.well-known/oauth-protected-resource',
   
   // Supported scopes for your MCP server
   supportedScopes: [
@@ -30,5 +32,8 @@ export const scalekit = new Scalekit(
 // WWW-Authenticate header for unauthorized responses
 export const WWW_AUTHENTICATE_HEADER = {
   key: 'WWW-Authenticate',
-  value: `Bearer realm="OAuth", resource_metadata="${SCALEKIT_CONFIG.resourceId}/.well-known/oauth-protected-resource"`
+  value: `Bearer realm="OAuth", resource_metadata="${ 
+    process.env.NODE_ENV === 'production' 
+    ? SCALEKIT_CONFIG.resourceMetadata 
+    : 'http://localhost:' + (process.env.PORT || '3000') }/.well-known/oauth-protected-resource"`
 };

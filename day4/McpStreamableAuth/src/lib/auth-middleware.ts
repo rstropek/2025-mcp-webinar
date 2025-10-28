@@ -13,10 +13,10 @@ declare global {
 }
 
 /**
- * Optional authentication middleware that extracts Bearer tokens without requiring them
- * This allows the server to know if a user is authenticated, but doesn't block requests
+ * Mandatory authentication middleware that requires valid Bearer tokens for all requests
+ * Requests without valid tokens will be rejected with 401 Unauthorized
  */
-export async function optionalAuthMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function requiredAuthMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     // Extract Bearer token from Authorization header
     const authHeader = req.headers['authorization'];
@@ -24,51 +24,52 @@ export async function optionalAuthMiddleware(req: Request, res: Response, next: 
       ? authHeader.split('Bearer ')[1]?.trim()
       : null;
 
-    if (token) {
-      try {
-        // Validate token if present
-        const claims = await scalekit.validateToken(token, {
-          audience: [SCALEKIT_CONFIG.resourceId],
-          // If necessary, add `requiredScopes` here for tool-specific validation
-        });
-
-        // Attach token and claims to request for use by tools
-        req.token = token;
-        req.tokenClaims = claims;
-        req.isAuthenticated = true;
-        console.log('✓ Authenticated request with token');
-      } catch (err) {
-        console.warn('⚠️ Invalid token provided, treating as unauthenticated:', err);
-        req.isAuthenticated = false;
-      }
-    } else {
-      req.isAuthenticated = false;
+    if (!token) {
+      throw new Error('Bearer token required');
     }
 
-    // Continue regardless of authentication status
-    next();
-  } catch (err) {
-    console.error('Error in optional auth middleware:', err);
-    req.isAuthenticated = false;
-    next();
-  }
-}
-
-
-/**
- * Validates that a token has the required scope(s)
- * Throws an error if validation fails
- */
-export async function validateScope(token: string, requiredScopes: string[]): Promise<any> {
-  try {
+    // Validate token
     const claims = await scalekit.validateToken(token, {
       audience: [SCALEKIT_CONFIG.resourceId],
-      requiredScopes: requiredScopes
+      // OAuth 2.0 Scopes: Fine-grained permissions for API access control
+      // 
+      // Scopes allow you to limit what an authenticated user/client can do with their token.
+      // They provide authorization (what you can do) on top of authentication (who you are).
+      //
+      // When to use `requiredScopes`:
+      // - When different tools/endpoints need different permission levels
+      // - Example: 'read:ponies' for listing, 'write:ponies' for creating/modifying
+      // - Example: 'admin:system' for administrative operations
+      //
+      // How to implement:
+      // 1. Define scopes in your OAuth provider (Scalekit, Auth0, etc.)
+      // 2. Request specific scopes when obtaining tokens (in OAuth flow)
+      // 3. Add `requiredScopes: ['scope1', 'scope2']` here to enforce them
+      // 4. Scalekit will verify the token contains ALL required scopes
+      //
+      // Example usage:
+      //   requiredScopes: ['read:ponies']        // For read-only operations
+      //   requiredScopes: ['write:ponies']       // For write operations
+      //   requiredScopes: ['read:ponies', 'write:ponies']  // For full access
+      //
+      // If token lacks required scopes, validation will fail with 401 Unauthorized
     });
-    return claims;
+
+    // Attach token and claims to request for use by tools
+    req.token = token;
+    req.tokenClaims = claims;
+    req.isAuthenticated = true;
+    console.log('✓ Authenticated request with token');
+
+    // Continue to next middleware
+    next();
   } catch (err) {
-    console.error(`Scope validation failed for scopes '${requiredScopes.join(', ')}':`, err);
-    throw err;
+    // Invalid or missing token - return 401 with WWW-Authenticate header
+    console.warn('⚠️ Authentication failed:', err);
+    res.status(401)
+      .header(WWW_AUTHENTICATE_HEADER.key, WWW_AUTHENTICATE_HEADER.value)
+      .end();
   }
 }
+
 

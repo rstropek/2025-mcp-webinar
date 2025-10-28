@@ -5,7 +5,6 @@ import { completable } from '@modelcontextprotocol/sdk/server/completable.js';
 import { loadPoniesFromFile, toOnePerLine } from './lib/ponies.js';
 import { createStreamableHTTPServer } from './lib/streamable-http.js';
 import { isAuthenticated, getToken, getTokenClaims } from './lib/auth-context.js';
-import { validateScope } from './lib/auth-middleware.js';
 
 const server = new McpServer({ name: 'pony-sdk-streamable', version: '0.1.0' });
 
@@ -176,13 +175,6 @@ server.registerTool(
     const token = getToken();
     if (!token) {
       throw new Error('Failed to retrieve authentication token.');
-    }
-
-    // Check for required permission
-    try {
-      await validateScope(token, ['pony:password:write']);
-    } catch (err) {
-      throw new Error(`Insufficient permissions. Required scope: pony:password:write`);
     }
 
     // Get custom ponies if provided, otherwise use default
