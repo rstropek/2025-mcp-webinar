@@ -6,7 +6,6 @@ if (!process.env.SCALEKIT_ENVIRONMENT_URL
   || !process.env.SCALEKIT_CLIENT_ID
   || !process.env.SCALEKIT_CLIENT_SECRET
   || !process.env.MCP_RESOURCE_ID
-  || !process.env.MCP_RESOURCE_METADATA
   || !process.env.MCP_SCOPES
 ) {
   throw new Error('Missing required environment variables');

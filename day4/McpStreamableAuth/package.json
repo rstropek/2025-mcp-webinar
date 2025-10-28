@@ -5,7 +5,8 @@
   "scripts": {
     "build": "tsc && cp -r src/data dist/",
     "start": "tsx ./src/server-sdk-streamable.ts",
-    "docker:build-push": "docker buildx build --platform linux/amd64,linux/arm64 -t rstropek/mcp-mylittlepony --push ."
+    "docker:build-push": "docker buildx build --platform linux/amd64,linux/arm64 -t rstropek/mcp-mylittlepony --push .",
+    "inspector": "npx @modelcontextprotocol/inspector"
   },
   "keywords": [],
   "author": "Rainer Stropek",
