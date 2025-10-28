@@ -1,14 +1,17 @@
 import 'dotenv/config';
 import { Scalekit } from '@scalekit-sdk/node';
 
-if (!process.env.SCALEKIT_ENVIRONMENT_URL
-  || !process.env.SCALEKIT_AUTH_SERVER
-  || !process.env.SCALEKIT_CLIENT_ID
-  || !process.env.SCALEKIT_CLIENT_SECRET
-  || !process.env.MCP_RESOURCE_ID
-  || !process.env.MCP_SCOPES
-) {
-  throw new Error('Missing required environment variables');
+const requiredEnvVars = [
+  'SCALEKIT_ENVIRONMENT_URL',
+  'SCALEKIT_AUTH_SERVER',
+  'SCALEKIT_CLIENT_ID',
+  'SCALEKIT_CLIENT_SECRET',
+  'MCP_RESOURCE_ID',
+  'MCP_SCOPES'
+];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (missingEnvVars.length > 0) {
+  throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
 }
 
 const devResourceId = `http://localhost:${process.env.PORT || '3000'}/mcp`;
