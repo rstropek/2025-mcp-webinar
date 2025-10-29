@@ -29,6 +29,11 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
   // Initialize Express application for HTTP server
   const app = express();
 
+  app.use((req, res, next) => {
+    console.log('Request received:', req.method, req.url);
+    next();
+  });
+
   /**
    * CORS (Cross-Origin Resource Sharing) configuration for the MCP server.
    * 
@@ -107,7 +112,7 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
    * - RFC 8707: https://datatracker.ietf.org/doc/html/rfc8707
    * - OAuth 2.0 Authorization Server Metadata: https://datatracker.ietf.org/doc/html/rfc8414
    */
-  app.get('/.well-known/oauth-protected-resource', (req, res) => {
+  function handleOAuthProtectedResource(req: express.Request, res: express.Response) {
     res.json({
       /**
        * authorization_servers: Array of authorization server URLs
@@ -180,7 +185,9 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
        */
       "scopes_supported": SCALEKIT_CONFIG.supportedScopes
     });
-  });
+  }
+  app.get('/.well-known/oauth-protected-resource/mcp', handleOAuthProtectedResource);
+  app.get('/mcp/.well-known/oauth-protected-resource', handleOAuthProtectedResource);
 
   // Health check endpoint (registered before auth middleware so it remains public)
   app.get('/health', (req, res) => {
@@ -190,6 +197,8 @@ export function createStreamableHTTPServer(server: McpServer, serverName: string
       activeSessions: Object.keys(transports).length,
       serverName: serverName,
       serverVersion: serverVersion,
+      resourceId: SCALEKIT_CONFIG.resourceId,
+      authServer: SCALEKIT_CONFIG.authServer,
     });
   });
 
