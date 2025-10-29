@@ -4,7 +4,7 @@ import { buildPassword, buildMany, buildPasswordAdvanced, filterPonies } from '.
 import { completable } from '@modelcontextprotocol/sdk/server/completable.js';
 import { loadPoniesFromFile, toOnePerLine } from './lib/ponies.js';
 import { createStreamableHTTPServer } from './lib/streamable-http.js';
-import { isAuthenticated, getToken, getTokenClaims } from './lib/auth-context.js';
+import { isAuthenticated, getTokenClaims } from './lib/auth-context.js';
 
 const server = new McpServer({ name: 'pony-sdk-streamable', version: '0.1.0' });
 
@@ -176,12 +176,6 @@ server.registerTool(
       { length, includeNumbers, includeSymbols, includeUppercase },
       ponies
     );
-
-    const claims = getTokenClaims();
-    const username = claims?.sub || claims?.email || 'anonymous';
-
-    console.log(`✓ Advanced hybrid password generated for authenticated user: ${username}`);
-    console.log(`  Length: ${result.metadata.length}, Composition: ${result.metadata.composition.join(', ')}`);
 
     return {
       content: [{ type: 'text', text: result.result }],
