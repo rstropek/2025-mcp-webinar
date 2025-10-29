@@ -1,11 +1,11 @@
 {
   "name": "mcp_mylittlepony",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "main": "index.ts",
   "scripts": {
     "build": "tsc && cp -r src/data dist/",
     "start": "tsx ./src/server-sdk-streamable.ts",
-    "docker:build-push": "docker buildx build --platform linux/amd64,linux/arm64 -t rstropek/mcp-mylittlepony --push .",
+    "docker:build-push": "./build/build.sh",
     "inspector": "npx @modelcontextprotocol/inspector"
   },
   "keywords": [],

@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "my-little-pony-password-online": {
+      "url": "https://ponypwd.mcp.rstropek.com/mcp",
+      "type": "http"
+    },
+    "my-little-pony-password-dev": {
+      "url": "http://localhost:3000/mcp",
+      "type": "http"
+    }
+  },
+  "inputs": []
+}
