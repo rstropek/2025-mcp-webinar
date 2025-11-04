@@ -1,0 +1,30 @@
+{
+  "name": "a2a",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/app.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/chalk": "^0.4.31",
+    "@types/dotenv": "^6.1.1",
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@a2a-js/sdk": "^0.3.4",
+    "better-sqlite3": "^12.4.1",
+    "chalk": "^5.6.2",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "openai": "^6.8.0",
+    "zod": "^3.25.76"
+  }
+}
