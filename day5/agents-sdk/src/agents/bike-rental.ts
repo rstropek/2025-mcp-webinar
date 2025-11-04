@@ -1,6 +1,16 @@
-import { Agent, Handoff } from "@openai/agents";
+import { Agent } from "@openai/agents";
 import * as bikes from '../tools/bikes.js';
 import { RECOMMENDED_PROMPT_PREFIX } from '@openai/agents-core/extensions';
+
+/**
+ * Demonstrates a GPT 5 agent with tools.
+ * For more details see:
+ * - https://openai.github.io/openai-agents-js/guides/agents/
+ * - https://openai.github.io/openai-agents-js/guides/tools/
+ * 
+ * Note that OpenAI Agents SDK is not limited to GPT models. Custom
+ * model providers are possible: https://openai.github.io/openai-agents-js/guides/models/#_top
+ */
 
 export function createBikeRentalAgent(): Agent {
     return new Agent({

@@ -1,8 +1,8 @@
-import { Agent, Handoff, type MCPServer } from "@openai/agents";
+import { Agent, Handoff, type InputGuardrail, type MCPServer } from "@openai/agents";
 import { sommelierAgent } from "./sommelier.js";
 import { RECOMMENDED_PROMPT_PREFIX } from '@openai/agents-core/extensions';
 
-export function createRestaurantAgent(fileSystemMcp: MCPServer): Agent {
+export function createRestaurantAgent(fileSystemMcp: MCPServer, creditCardDetectionGuardrail: InputGuardrail): Agent {
     return new Agent({
         name: 'Vegetarian Restaurant Agent',
         handoffDescription: 'This agent is responsible for restaurant services',
@@ -14,6 +14,7 @@ export function createRestaurantAgent(fileSystemMcp: MCPServer): Agent {
         },
         mcpServers: [fileSystemMcp],
         handoffs: [],
+        inputGuardrails: [creditCardDetectionGuardrail],
         tools: [sommelierAgent.asTool({
             toolName: 'Sommelier Tool',
             toolDescription: 
