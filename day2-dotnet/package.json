@@ -1,0 +1,20 @@
+{
+  "name": "mcp-winter-password-dotnet",
+  "version": "1.0.0",
+  "description": "MCP Winter Password Generator - C#/.NET Implementation",
+  "scripts": {
+    "inspector:sdk": "npx @modelcontextprotocol/inspector dotnet run --project McpServerSdk",
+    "inspector:no-sdk": "npx @modelcontextprotocol/inspector dotnet run --project McpServerNoSdk",
+    "inspector:sampling": "npx @modelcontextprotocol/inspector dotnet run --project McpServerSampling",
+    "inspector:verify-image": "npx @modelcontextprotocol/inspector dotnet run --project McpServerVerifyImage",
+    "build": "dotnet build",
+    "test:client": "dotnet run --project McpClient"
+  },
+  "keywords": ["mcp", "dotnet", "csharp", "password", "generator"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@modelcontextprotocol/inspector": "^0.17.1"
+  }
+}
+
