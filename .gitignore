@@ -221,7 +221,6 @@ artifacts/
 *.user
 *.userosscache
 *.sln.docstates
-
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
@@ -237,3 +236,4 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+
