@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\day2-dotnet\WinterPasswordLib\WinterPasswordLib.csproj" />
+    <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
   </ItemGroup>
 
   <ItemGroup>
