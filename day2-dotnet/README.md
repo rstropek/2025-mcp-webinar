@@ -18,7 +18,7 @@ The MCP server can generate passwords by concatenating winter-themed words.
 
 The second sample implements the same functionality as the first sample, but this time it uses the MCP SDK. This makes the implementation much simpler and more robust.
 
-The sample contains tools, a prompt, and a resource.
+The sample contains two tools (`winter_password` for single password generation and `winter_password_batch` for generating multiple passwords), a prompt, and a resource.
 
 ### Sample 3: MCP Server With Sampling
 
@@ -28,14 +28,14 @@ This example introduces the concept of sampling in MCP. The server can generate 
 
 This example shows how to work with content that is not text. It implements an MCP server that uses sampling to verify images. If you want to try this MCP server, perform the following steps:
 
-1. Run the sample web server with `npm run start:server` (from the `day2` folder).
+1. Run the sample web server with `npm run start:server` (from the `day2-dotnet` folder).
 2. Enable the `Verify Image` tool in the [MCP configuration](./.vscode/mcp.json) (if using VS Code).
 3. Try the following prompt:
 
    ```
-   Use the playwright mcp server to open http://localhost:3000/ and create a screenshot. Then use the verify-image MCP server to check if the screenshot claims that C# is "awesome".
+   Can you please check if #file:image.png contains the phrase ".NET Stammtisch Linz"
    ```
 
 ### Sample 5: Simple MCP Client
 
-This sample shows how to create an MCP client with _stdio_ transport. It queries the server for the list of tools.
+This sample shows how to create an MCP client with _stdio_ transport. It queries the server for the list of tools and tests both the `winter_password` and `winter_password_batch` tools.
