@@ -6,6 +6,7 @@ using System.Text.Json;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using static ModelContextProtocol.Protocol.ElicitRequestParams;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,8 @@ builder.Services.AddMcpServer()
     .WithPromptsFromAssembly()
     .WithResourcesFromAssembly();
 
+builder.AddServiceDefaults();
+
 var app = builder.Build();
 
 // Use CORS
@@ -45,14 +48,24 @@ app.MapMcp();
 
 app.Run();
 
+
 [McpServerToolType]
 public static class WinterPasswordTools
 {
+    // .NET Activity Source is called "Tracer" in OpenTelemetry.
+    // Consider using https://opentelemetry.io/docs/languages/net/shim/
+    // to harmonize the naming of the components.
+    private static readonly ActivitySource source = new("McpStreamableServer");
+
     [McpServerTool, Description("Builds a password from winter words.")]
     public static string WinterPassword(
         [Description("Minimum length of the password")] int minLength = 16,
         [Description("Enable special character replacement")] bool special = false)
     {
+        using var activity = source.StartActivity("Calling gRPC Greeter");
+        activity?.SetTag("minLength", minLength);
+        activity?.SetTag("special", special);
+        
         var opts = new PasswordGenerationOptions { MinLength = minLength, Special = special };
         var output = PasswordGenerator.BuildPassword(opts);
         return output;
@@ -64,6 +77,11 @@ public static class WinterPasswordTools
         [Description("Minimum length of the password")] int minLength = 16,
         [Description("Enable special character replacement")] bool special = false)
     {
+        using var activity = source.StartActivity("Calling gRPC Greeter for batch");
+        activity?.SetTag("count", count);
+        activity?.SetTag("minLength", minLength);
+        activity?.SetTag("special", special);
+
         var opts = new PasswordGenerationOptions { MinLength = minLength, Special = special };
         return PasswordGenerator.BuildMany(count, opts);
     }
@@ -74,16 +92,20 @@ public static class WinterPasswordTools
         [Description("Minimum length of the password")] int minLength = 16,
         [Description("Enable special character replacement")] bool special = false)
     {
-        // Check if the client supports elicitation
-        if (server.ClientCapabilities?.Elicitation == null)
-        {
-            throw new McpException("Client does not support elicitation");
-        }
+        string[]? customWords = null;
 
-        // Ask the user if they want to use custom words
-        var useCustomSchema = new RequestSchema
+        using (var activity = source.StartActivity("Elicitation for custom words"))
         {
-            Properties =
+            // Check if the client supports elicitation
+            if (server.ClientCapabilities?.Elicitation == null)
+            {
+                throw new McpException("Client does not support elicitation");
+            }
+
+            // Ask the user if they want to use custom words
+            var useCustomSchema = new RequestSchema
+            {
+                Properties =
             {
                 ["UseCustomWords"] = new BooleanSchema
                 {
@@ -91,22 +113,21 @@ public static class WinterPasswordTools
                     Description = "Do you want to provide your own winter words instead of using the built-in ones?"
                 }
             }
-        };
+            };
 
-        var useCustomResponse = await server.ElicitAsync(new ElicitRequestParams
-        {
-            Message = "Do you want to use custom winter words?",
-            RequestedSchema = useCustomSchema
-        }, CancellationToken.None);
-
-        string[]? customWords = null;
-
-        // If user wants to provide custom words
-        if (useCustomResponse.Action == "accept" && useCustomResponse.Content?["UseCustomWords"].ValueKind == JsonValueKind.True)
-        {
-            var wordsSchema = new RequestSchema
+            var useCustomResponse = await server.ElicitAsync(new ElicitRequestParams
             {
-                Properties =
+                Message = "Do you want to use custom winter words?",
+                RequestedSchema = useCustomSchema
+            }, CancellationToken.None);
+
+
+            // If user wants to provide custom words
+            if (useCustomResponse.Action == "accept" && useCustomResponse.Content?["UseCustomWords"].ValueKind == JsonValueKind.True)
+            {
+                var wordsSchema = new RequestSchema
+                {
+                    Properties =
                 {
                     ["CustomWords"] = new StringSchema
                     {
@@ -115,32 +136,33 @@ public static class WinterPasswordTools
                         MinLength = 1
                     }
                 }
-            };
+                };
 
-            var wordsResponse = await server.ElicitAsync(new ElicitRequestParams
-            {
-                Message = "Enter your custom winter words (comma-separated):",
-                RequestedSchema = wordsSchema
-            }, CancellationToken.None);
-
-            if (wordsResponse.Action == "accept")
-            {
-                var wordsString = wordsResponse.Content?["CustomWords"].GetString();
-                if (!string.IsNullOrWhiteSpace(wordsString))
+                var wordsResponse = await server.ElicitAsync(new ElicitRequestParams
                 {
-                    customWords = wordsString.Split(',')
-                        .Select(w => w.Trim())
-                        .Where(w => !string.IsNullOrWhiteSpace(w))
-                        .ToArray();
+                    Message = "Enter your custom winter words (comma-separated):",
+                    RequestedSchema = wordsSchema
+                }, CancellationToken.None);
+
+                if (wordsResponse.Action == "accept")
+                {
+                    var wordsString = wordsResponse.Content?["CustomWords"].GetString();
+                    if (!string.IsNullOrWhiteSpace(wordsString))
+                    {
+                        customWords = [.. wordsString.Split(',')
+                            .Select(w => w.Trim())
+                            .Where(w => !string.IsNullOrWhiteSpace(w))];
+                    }
                 }
             }
-        }
-        else
-        {
-            // User chose not to provide custom words
-            customWords = PasswordGenerator.DefaultWords;
+            else
+            {
+                // User chose not to provide custom words
+                customWords = PasswordGenerator.DefaultWords;
+            }
         }
 
+        using var activity2 = source.StartActivity("Generating password with custom words");
         var opts = new PasswordGenerationOptions { MinLength = minLength, Special = special };
         var output = PasswordGenerator.BuildPassword(opts, customWords);
         return output;
