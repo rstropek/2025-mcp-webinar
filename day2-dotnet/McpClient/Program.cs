@@ -1,19 +1,11 @@
 ﻿using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
-using System.IO;
-using System.Reflection;
-
-// Get the directory where the client assembly is located
-var clientDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
-// Navigate to the solution root (go up from bin/Debug/net10.0 to day2-dotnet)
-var solutionRoot = Path.GetFullPath(Path.Combine(clientDir, "..", "..", "..", ".."));
-var serverProjectPath = Path.Combine(solutionRoot, "McpServerSdk", "McpServerSdk.csproj");
 
 var transport = new StdioClientTransport(new StdioClientTransportOptions
 {
     Name = "winter-password-server",
     Command = "dotnet",
-    Arguments = new[] { "run", "--project", serverProjectPath, "--no-build" }
+    Arguments = ["run", "--project", "McpServerSdk", "--no-build"]
 });
 
 var client = await McpClient.CreateAsync(transport);
