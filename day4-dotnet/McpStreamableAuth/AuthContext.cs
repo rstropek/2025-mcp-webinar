@@ -90,19 +90,12 @@ public static class AuthContextAccessor
     /// Gets the token claims from HttpContext if available (ASP.NET Core standard approach).
     /// Falls back to AsyncLocal context if HttpContext is not available.
     /// </summary>
-    public static Dictionary<string, object>? GetTokenClaimsFromHttpContext(HttpContext? httpContext)
+    public static List<KeyValuePair<string, object>>? GetTokenClaimsFromHttpContext(HttpContext? httpContext)
     {
         if (httpContext?.User?.Identity?.IsAuthenticated == true)
         {
             // Use ASP.NET Core's ClaimsPrincipal
-            return httpContext.User.Claims.ToDictionary(c => c.Type, c => (object)c.Value);
-        }
-        
-        // Fallback to AsyncLocal context
-        var context = GetContext();
-        if (context?.TokenClaims is Dictionary<string, object> claims)
-        {
-            return claims;
+            return [.. httpContext.User.Claims.Select(c => new KeyValuePair<string, object>(c.Type, c.Value))];
         }
         
         return null;
