@@ -27,7 +27,7 @@ server.registerTool(
             content: {
               type: 'text',
               text: [
-                `Generate a JSON array of 30 distinct My Little Pony names}.`,
+                `Generate a JSON array of 30 distinct My Little Pony names.`,
                 `Rules:`,
                 `- Each entry must be an object with "first" (required) and optional "last" properties.`,
                 `- Names should be CamelCase strings with letters only (A–Z, a–z), with optional last name.`,
