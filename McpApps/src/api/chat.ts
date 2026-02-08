@@ -1,10 +1,10 @@
 import { type Request, type Response } from 'express';
 import { LLMClient } from '../lib/llm.js';
+import { loadPoniesFromFile } from '../lib/ponies.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-// Helper function to generate ponies using LLM (similar to sampling)
-async function generatePoniesWithSampling(): Promise<any[]> {
-  console.log('\n=== GENERATING PONIES WITH SAMPLING ===');
+/** Generate ponies via LLM for the form; exported for use by sample_ponies tool. */
+export async function generatePoniesWithSampling(): Promise<any[]> {
   const llm = new LLMClient();
   
   const prompt = `Generate a JSON array of 30 distinct My Little Pony names.
@@ -55,12 +55,8 @@ Return ONLY the JSON array. No prose, no markdown, no code blocks.`;
       )
     ).slice(0, 30);
 
-    console.log(`Valid ponies: ${ponies.length}`);
-
     return ponies;
   } catch (error) {
-    console.error('Error generating ponies:', error);
-    console.error('Error stack:', (error as Error).stack);
     return [];
   }
 }
@@ -104,14 +100,12 @@ export async function handleChat(
   try {
     const { message, conversationHistory = [] } = req.body;
 
-    console.log('=== CHAT REQUEST ===');
-    console.log('User message:', message);
-    console.log('Conversation history length:', conversationHistory.length);
-
     if (!message || typeof message !== 'string') {
       res.status(400).json({ error: 'Message is required' });
       return;
     }
+
+    console.log('[Chat] User:', message);
 
     const llm = new LLMClient();
 
@@ -123,8 +117,7 @@ export async function handleChat(
               (('_def' in tool.inputSchema) || ('shape' in tool.inputSchema))) {
             try {
               parameters = zodToJsonSchema(tool.inputSchema as any);
-            } catch (error) {
-              console.error(`Error converting Zod schema for tool ${tool.name}:`, error);
+            } catch {
               parameters = { type: 'object', properties: {}, required: [] };
             }
           } else {
@@ -145,16 +138,14 @@ export async function handleChat(
     const messages = [
       {
         role: 'system' as const,
-        content: `You are a helpful assistant with access to tools for generating passwords from My Little Pony character names. 
+        content: `You are a helpful assistant with access to tools for generating passwords from My Little Pony character names.
 
-IMPORTANT: When a user asks to generate passwords, you MUST actually call the pony_password_batch tool. Do NOT just describe calling it - you must make the actual tool call.
+PASSWORD GENERATION:
+- When the user wants to generate passwords, call pony_password_batch to show the interactive form. Pass count, minLength, special (and optionally selectedPonies) from the user's request.
+- If the user wants suggested or varied ponies for the form (e.g. "suggest some ponies", "use sampling", "generate pony names for the form"), first call the sample_ponies tool, then call pony_password_batch and pass the returned list as sampledPonies so the form shows those ponies. Otherwise you can call pony_password_batch without sampledPonies; the form will use a default list.
 
-You can extract preferences from the user's message like:
-- Number of passwords (count) - default is 1 if user says "ein passwort" or "a password", otherwise 5
-- Minimum length (minLength) - default is 16
-- Whether they want special characters (special) - default is false
-
-When you call the tool, it will show an interactive form to the user. You should call it with the appropriate parameters based on what the user requested.`,
+RECALLING GENERATED PASSWORDS:
+- When the user asks what password(s) they generated (e.g. "which passwords did I generate?", "what was the password?"), the conversation history may contain a previous assistant message that lists them, e.g. "The user has generated the following password(s) in the form: X, Y, Z." You MUST answer from that context and tell the user their generated password(s). Do not say you cannot recall them if that message is in the history.`,
       },
       ...conversationHistory,
       {
@@ -163,14 +154,12 @@ When you call the tool, it will show an interactive form to the user. You should
       },
     ];
     
-    console.log('\n=== CALLING LLM ===');
-    console.log('Tools available:', tools.length);
-    
     const response = await llm.chat(messages, tools.length > 0 ? tools : undefined);
-    
-    console.log('\n=== LLM RESPONSE ===');
-    console.log('Response text:', response.text);
-    console.log('Tool calls:', response.toolCalls ? JSON.stringify(response.toolCalls, null, 2) : 'none');
+
+    console.log('[Chat] LLM text:', response.text || '(empty)');
+    if (response.toolCalls?.length) {
+      console.log('[Chat] Tool calls:', response.toolCalls.map(tc => ({ name: tc.name, args: tc.arguments })));
+    }
 
     // If LLM wants to call a tool, check if it has UI
     if (response.toolCalls && response.toolCalls.length > 0) {
@@ -180,40 +169,40 @@ When you call the tool, it will show an interactive form to the user. You should
       });
 
       if (toolWithUI) {
-        console.log('\n=== TOOL WITH UI DETECTED ===');
-        console.log('Tool name:', toolWithUI.name);
-        console.log('Tool arguments:', JSON.stringify(toolWithUI.arguments, null, 2));
-        
         const toolMeta = toolMetadata.get(toolWithUI.name);
         const uiResource = toolMeta?.uiResource || null;
-        
-        console.log('UI Resource:', uiResource);
-        console.log('Generating ponies with sampling...');
-        
-        // Generate ponies using sampling (similar to day2)
-        let sampledPonies: any[] = [];
-        try {
-          
-          sampledPonies = await generatePoniesWithSampling();
-          console.log(`Generated ${sampledPonies.length} ponies via sampling`);
-        } catch (error) {
-          console.error('Error generating ponies with sampling:', error);
+        const args = toolWithUI.arguments || {};
+        let sampledPonies: any[] = Array.isArray(args.sampledPonies) && args.sampledPonies.length > 0
+          ? args.sampledPonies
+          : [];
+        if (sampledPonies.length === 0) {
+          const samplePoniesCall = response.toolCalls.find(tc => tc.name === 'sample_ponies');
+          if (samplePoniesCall) {
+            try {
+              const handler = toolHandlers.get('sample_ponies');
+              if (handler) {
+                const result = await handler(samplePoniesCall.arguments);
+                if (result?.ponies && Array.isArray(result.ponies)) sampledPonies = result.ponies;
+              }
+            } catch {
+              // ignore
+            }
+          }
+          if (sampledPonies.length === 0) sampledPonies = loadPoniesFromFile().slice(0, 15);
         }
-        
+
         const uiMessage = `I'm showing you an interactive form to configure the password generation. Please fill out the form and submit it when you're ready.`;
-        
+
         const responseData = {
           text: uiMessage,
           uiResource: uiResource,
           toolArgs: {
-            ...toolWithUI.arguments,
-            sampledPonies: sampledPonies, 
+            ...args,
+            sampledPonies,
           },
         };
-        
-        console.log('\n=== SENDING RESPONSE (WITH UI) ===');
-        console.log('Response data:', JSON.stringify(responseData, null, 2));
-        
+
+        console.log('[Chat] Response: UI form, ponies for form:', sampledPonies.length);
         res.json(responseData);
         return;
       }
@@ -229,14 +218,12 @@ When you call the tool, it will show an interactive form to the user. You should
         const toolCallId = toolCallIds[idx];
         
         try {
-          // Call the tool handler directly
           const handler = toolHandlers.get(toolCall.name);
           if (!handler) {
             throw new Error(`Tool handler not found: ${toolCall.name}`);
           }
-          
           const toolResult = await handler(toolCall.arguments);
-          
+          console.log('[Chat] Tool result', toolCall.name, ':', JSON.stringify(toolResult).slice(0, 200) + (JSON.stringify(toolResult).length > 200 ? '...' : ''));
           toolResults.push({
             tool_call_id: toolCallId,
             role: 'tool' as const,
@@ -244,6 +231,7 @@ When you call the tool, it will show an interactive form to the user. You should
             content: JSON.stringify({ result: toolResult }),
           });
         } catch (error) {
+          console.log('[Chat] Tool error', toolCall.name, ':', (error as Error).message);
           toolResults.push({
             tool_call_id: toolCallId,
             role: 'tool' as const,
@@ -253,7 +241,6 @@ When you call the tool, it will show an interactive form to the user. You should
         }
       }
 
-      // Call LLM again with tool results
       const finalMessages: any[] = [
         ...messages,
         {
@@ -273,8 +260,43 @@ When you call the tool, it will show an interactive form to the user. You should
 
       const finalResponse = await llm.chat(finalMessages, tools.length > 0 ? tools : undefined);
 
-      console.log('\n=== FINAL RESPONSE (NO UI) ===');
-      console.log('Response text:', finalResponse.text);
+      console.log('[Chat] LLM (after tools) text:', finalResponse.text || '(empty)');
+      if (finalResponse.toolCalls?.length) {
+        console.log('[Chat] LLM (after tools) tool calls:', finalResponse.toolCalls.map(tc => ({ name: tc.name, args: tc.arguments })));
+      }
+
+      const finalToolWithUI = finalResponse.toolCalls?.find(tc => toolMetadata.get(tc.name)?.hasUI);
+      if (finalToolWithUI) {
+        const toolMeta = toolMetadata.get(finalToolWithUI.name);
+        const uiResource = toolMeta?.uiResource || null;
+        const args = finalToolWithUI.arguments || {};
+        let sampledPonies: any[] = Array.isArray(args.sampledPonies) && args.sampledPonies.length > 0
+          ? args.sampledPonies
+          : [];
+        if (sampledPonies.length === 0) {
+          const sampleResult = toolResults.find(tr => tr.name === 'sample_ponies');
+          if (sampleResult) {
+            try {
+              const parsed = JSON.parse(sampleResult.content);
+              if (parsed?.result?.ponies && Array.isArray(parsed.result.ponies)) {
+                sampledPonies = parsed.result.ponies;
+              }
+            } catch {
+              // ignore
+            }
+          }
+          if (sampledPonies.length === 0) sampledPonies = loadPoniesFromFile().slice(0, 15);
+        }
+        const uiMessage = `I'm showing you an interactive form to configure the password generation. Please fill out the form and submit it when you're ready.`;
+        const responseData = {
+          text: uiMessage,
+          uiResource,
+          toolArgs: { ...args, sampledPonies },
+        };
+        console.log('[Chat] Response: UI form (from second round), ponies for form:', sampledPonies.length);
+        res.json(responseData);
+        return;
+      }
       
       res.json({
         text: finalResponse.text,
@@ -282,22 +304,15 @@ When you call the tool, it will show an interactive form to the user. You should
         toolArgs: null,
       });
     } else {
-      console.log('\n=== RESPONSE (NO TOOL CALLS) ===');
-      console.log('Response text:', response.text);
-      
+      console.log('[Chat] Response: text only');
       res.json({
         text: response.text,
         uiResource: null,
         toolArgs: null,
       });
     }
-    
-    console.log('\n=== CHAT REQUEST COMPLETE ===\n');
   } catch (error) {
-    console.error('\n=== CHAT ERROR ===');
-    console.error('Error:', error);
-    console.error('Error message:', (error as Error).message);
-    console.error('Error stack:', (error as Error).stack);
+    console.log('[Chat] Error:', (error as Error).message);
     res.status(500).json({ error: (error as Error).message });
   }
 }
