@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Chatbot with Apps</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #f5f5f5;
+        }
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .message {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 80%;
+        }
+        .message.user {
+            align-self: flex-end;
+        }
+        .message.assistant {
+            align-self: flex-start;
+        }
+        .message-content {
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+        .message.user .message-content {
+            background: #007bff;
+            color: white;
+        }
+        .message.assistant .message-content {
+            background: #e9ecef;
+            color: #333;
+        }
+        .mcp-app-container {
+            margin-top: 12px;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            overflow: hidden;
+            width: 100%;
+            max-width: 100%;
+            min-height: 400px;
+        }
+        .mcp-app-container iframe {
+            width: 100%;
+            border: none;
+            min-height: 400px;
+            display: block;
+        }
+        .input-area {
+            padding: 16px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 12px;
+        }
+        .input-area input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .input-area button {
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .input-area button:hover {
+            background: #0056b3;
+        }
+        .input-area button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            border-top-color: #007bff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🦄 MCP Chatbot with Apps</h1>
+        <p>Chat with an LLM that has access to MCP tools and can show interactive forms</p>
+    </div>
+    
+    <div class="chat-container">
+        <div class="messages" id="messages"></div>
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Type your message..." />
+            <button id="sendBtn">Send</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Simple MCP Client for the chatbot
+        class SimpleMcpClient {
+            constructor(mcpUrl) {
+                this.mcpUrl = mcpUrl;
+                this.sessionId = null;
+            }
+
+            async initialize() {
+                const response = await fetch(this.mcpUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: 1,
+                        method: 'initialize',
+                        params: {
+                            protocolVersion: '2024-11-05',
+                            capabilities: {},
+                            clientInfo: { name: 'web-chatbot', version: '1.0.0' }
+                        }
+                    })
+                });
+                const data = await response.json();
+                this.sessionId = response.headers.get('mcp-session-id');
+                return data;
+            }
+
+            async listTools() {
+                const response = await fetch(this.mcpUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'mcp-session-id': this.sessionId
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: 2,
+                        method: 'tools/list',
+                        params: {}
+                    })
+                });
+                return await response.json();
+            }
+
+            async callTool(name, args) {
+                const response = await fetch(this.mcpUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'mcp-session-id': this.sessionId
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: Date.now(),
+                        method: 'tools/call',
+                        params: { name, arguments: args }
+                    })
+                });
+                return await response.json();
+            }
+
+            async readResource(uri) {
+                const response = await fetch(this.mcpUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'mcp-session-id': this.sessionId
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: Date.now(),
+                        method: 'resources/read',
+                        params: { uri }
+                    })
+                });
+                return await response.json();
+            }
+        }
+
+        // LLM client that calls the backend API
+        class LLMClient {
+            constructor() {
+                this.conversationHistory = [];
+            }
+
+            async chat(userMessage) {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: userMessage,
+                        conversationHistory: this.conversationHistory
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Update conversation history
+                this.conversationHistory.push({ role: 'user', content: userMessage });
+                this.conversationHistory.push({ role: 'assistant', content: data.text });
+                
+                return data;
+            }
+        }
+
+        // Chat UI
+        const messagesDiv = document.getElementById('messages');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        const llm = new LLMClient();
+
+        // Initialize
+        addMessage('assistant', 'Hello! I can help you generate passwords using My Little Pony character names. Try asking: "Generate 3 passwords with special characters"');
+
+        function addMessage(role, text, uiResource = null, toolArgs = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = text;
+            
+            messageDiv.appendChild(contentDiv);
+            
+            if (uiResource) {
+                console.log('\n=== LOADING UI RESOURCE ===');
+                console.log('UI Resource:', uiResource);
+                console.log('Tool Args:', toolArgs);
+                
+                const appContainer = document.createElement('div');
+                appContainer.className = 'mcp-app-container';
+                const iframe = document.createElement('iframe');
+                iframe.style.width = '100%';
+                iframe.style.minHeight = '500px';
+                iframe.style.border = 'none';
+                
+                // Load UI resource via API
+                const url = `/api/ui-resource?uri=${encodeURIComponent(uiResource)}&args=${encodeURIComponent(JSON.stringify(toolArgs || {}))}`;
+                console.log('Fetching UI from:', url);
+                
+                fetch(url)
+                    .then(r => {
+                        console.log('UI Resource response status:', r.status);
+                        return r.text();
+                    })
+                    .then(html => {
+                        console.log('UI Resource HTML length:', html.length);
+                        console.log('Setting iframe srcdoc...');
+                        iframe.srcdoc = html;
+                        
+                        // Wait for iframe to load and check for errors
+                        iframe.onload = () => {
+                            console.log('Iframe loaded successfully');
+                            try {
+                                const iframeWindow = iframe.contentWindow;
+                                if (iframeWindow) {
+                                    console.log('Iframe window accessible');
+                                    // Check if console logs are available
+                                    iframeWindow.addEventListener('error', (e) => {
+                                        console.error('Iframe error:', e);
+                                    });
+                                }
+                            } catch (e) {
+                                console.error('Cannot access iframe content:', e);
+                            }
+                        };
+                        
+                        iframe.onerror = (e) => {
+                            console.error('Iframe load error:', e);
+                        };
+                    })
+                    .catch(err => {
+                        console.error('Error loading UI resource:', err);
+                        iframe.srcdoc = `<html><body><p>Error loading UI: ${err.message}</p></body></html>`;
+                    });
+                
+                appContainer.appendChild(iframe);
+                messageDiv.appendChild(appContainer);
+            }
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            addMessage('user', message);
+            userInput.value = '';
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<span class="loading"></span>';
+
+            try {
+                const response = await llm.chat(message);
+                addMessage('assistant', response.text, response.uiResource, response.toolArgs);
+            } catch (error) {
+                console.error('Chat error:', error);
+                addMessage('assistant', `Error: ${error.message}. Make sure the server is running and your API key is configured in .env`);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send';
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
+
