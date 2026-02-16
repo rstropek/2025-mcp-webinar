@@ -56,11 +56,11 @@ rl.on("line", (line) => {
   if (!line.trim()) return;
   let msg: JR;
   try { msg = JSON.parse(line); }
-  catch { return send({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }); }
+  catch { return send({ jsonrpc: "2.0", id: 0, error: { code: -32700, message: "Parse error" } }); }
 
   if (msg.method === "initialize") return handleInitialize(msg.id);
   if (msg.method === "tools/list") return handleToolsList(msg.id);
   if (msg.method === "tools/call") return handleToolsCall(msg.id, msg.params);
 
-  send({ jsonrpc: "2.0", id: msg.id ?? null, error: { code: -32601, message: `Unsupported method: ${msg.method}` } });
+  send({ jsonrpc: "2.0", id: msg.id ?? 0, error: { code: -32601, message: `Unsupported method: ${msg.method}` } });
 });

@@ -15,7 +15,7 @@ console.log(">>> List of tools:");
 
 const tools = await client.listTools();
 for (const tool of tools.tools) {
-    console.log(`Tool: ${tool.name} (${tool.id}) - ${tool.description}`);
+    console.log(`Tool: ${tool.name} - ${tool.description}`);
 }
 
 transport.close();
