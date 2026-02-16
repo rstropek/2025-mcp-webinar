@@ -32,10 +32,11 @@ async function* createResponse(client: OpenAI, userMessage: string): AsyncGenera
   let requiresFurtherActions: boolean;
   do {
     requiresFurtherActions = false;
+    let hasOutputText = false;
     const response = await client.responses.create({
-      model: "gpt-5",
+      model: "gpt-5.2",
       reasoning: {
-        effort: 'minimal',
+        effort: 'none',
       },
       instructions: systemPrompt,
       input,
@@ -55,6 +56,11 @@ async function* createResponse(client: OpenAI, userMessage: string): AsyncGenera
       if (chunk.type === "response.created") {
         previousResponseId = chunk.response.id;
       } else if (chunk.type === "response.output_text.delta") {
+        // Add newline before first text output in each iteration
+        if (!hasOutputText) {
+          yield '\n';
+          hasOutputText = true;
+        }
         // Text to be displayed to the user
         yield chunk.delta;
       } else if (chunk.type === "response.output_item.done" && chunk.item.type === "function_call") {
