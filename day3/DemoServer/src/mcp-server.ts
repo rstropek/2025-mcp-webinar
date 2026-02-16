@@ -22,7 +22,6 @@ async function echoTool(
     {
       level: 'debug',
       data: 'Echo tool invoked',
-      relatedRequestId: extra.requestId,
     },
     extra.sessionId
   );
@@ -34,7 +33,6 @@ async function echoTool(
         {
           level: 'info',
           data: `Thinking hard... (${i + 1}/3)`,
-          relatedRequestId: extra.requestId,
         },
         extra.sessionId
       );
