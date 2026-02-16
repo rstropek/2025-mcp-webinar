@@ -12,10 +12,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "othello-game": "*"
+    "othello-game": "file:../othello-game"
   },
   "devDependencies": {
-    "@types/node": "^24.7.0",
+    "@types/node": "^25.2.3",
     "typescript": "^5.9.3"
   }
 }
