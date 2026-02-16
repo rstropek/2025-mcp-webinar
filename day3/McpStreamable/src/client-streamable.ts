@@ -15,14 +15,14 @@ console.log('>>> List of tools:');
 
 const tools = await client.listTools();
 for (const tool of tools.tools) {
-  console.log(`Tool: ${tool.name} (${tool.id}) - ${tool.description}`);
+  console.log(`Tool: ${tool.name} (${tool.description}`);
 }
 
 console.log('\n>>> List of prompts:');
 
 const prompts = await client.listPrompts();
 for (const prompt of prompts.prompts) {
-  console.log(`Prompt: ${prompt.name} (${prompt.id}) - ${prompt.description}`);
+  console.log(`Prompt: ${prompt.name} - ${prompt.description}`);
 }
 
 console.log('\n>>> List of resources:');
