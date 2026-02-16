@@ -191,7 +191,7 @@ server.registerTool(
     description: 'Returns the claims from the JWT authentication token for the current request. Requires authentication.',
     inputSchema: {},
     outputSchema: {
-      claims: z.record(z.any()).optional(),
+      claims: z.record(z.string(), z.any()).optional(),
       isAuthenticated: z.boolean(),
     },
   },
