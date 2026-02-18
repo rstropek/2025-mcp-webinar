@@ -1,5 +1,4 @@
 import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
 
 export interface LLMMessage {
   role: 'user' | 'assistant' | 'system' | 'tool';
@@ -34,28 +33,16 @@ export interface LLMResponse {
 }
 
 export class LLMClient {
-  private openai?: OpenAI;
-  private anthropic?: Anthropic;
-  private provider: 'openai' | 'anthropic';
+  private openai: OpenAI;
   private model: string;
 
   constructor() {
-    this.provider = (process.env.LLM_PROVIDER as 'openai' | 'anthropic') || 'openai';
-    this.model = process.env.LLM_MODEL || 'gpt-4';
-
-    if (this.provider === 'openai') {
-      const apiKey = process.env.OPENAI_API_KEY;
-      if (!apiKey) {
-        throw new Error('OPENAI_API_KEY environment variable is required');
-      }
-      this.openai = new OpenAI({ apiKey });
-    } else if (this.provider === 'anthropic') {
-      const apiKey = process.env.ANTHROPIC_API_KEY;
-      if (!apiKey) {
-        throw new Error('ANTHROPIC_API_KEY environment variable is required');
-      }
-      this.anthropic = new Anthropic({ apiKey });
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY environment variable is required');
     }
+    this.openai = new OpenAI({ apiKey });
+    this.model = process.env.LLM_MODEL || 'gpt-4';
   }
 
   async chat(
@@ -63,11 +50,7 @@ export class LLMClient {
     tools?: LLMTool[],
     toolChoice?: 'auto' | 'none' | { type: 'function'; function: { name: string } }
   ): Promise<LLMResponse> {
-    if (this.provider === 'openai') {
-      return this.chatOpenAI(messages, tools, toolChoice);
-    } else {
-      return this.chatAnthropic(messages, tools);
-    }
+    return this.chatOpenAI(messages, tools, toolChoice);
   }
 
   private async chatOpenAI(
@@ -75,8 +58,6 @@ export class LLMClient {
     tools?: LLMTool[],
     toolChoice?: 'auto' | 'none' | { type: 'function'; function: { name: string } }
   ): Promise<LLMResponse> {
-    if (!this.openai) throw new Error('OpenAI client not initialized');
-
     const openAIMessages: any[] = messages.map(msg => {
       const base: any = {
         role: msg.role,
@@ -133,52 +114,6 @@ export class LLMClient {
           name: tc.function.name,
           arguments: JSON.parse(tc.function.arguments),
         }));
-    }
-
-    return result;
-  }
-
-  private async chatAnthropic(
-    messages: LLMMessage[],
-    tools?: LLMTool[]
-  ): Promise<LLMResponse> {
-    if (!this.anthropic) throw new Error('Anthropic client not initialized');
-
-    const systemMessage = messages.find(m => m.role === 'system')?.content || '';
-    const conversationMessages = messages.filter(m => m.role !== 'system');
-
-    const response = await this.anthropic.messages.create({
-      model: this.model,
-      max_tokens: 4096,
-      system: systemMessage || undefined,
-      messages: conversationMessages.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'assistant',
-        content: msg.content,
-      })),
-      tools: tools?.map(tool => ({
-        name: tool.function.name,
-        description: tool.function.description,
-        input_schema: tool.function.parameters,
-      })),
-    });
-
-    const textContent = response.content.find(c => c.type === 'text');
-    const toolUseContent = response.content.filter(c => c.type === 'tool_use');
-
-    const result: LLMResponse = {
-      text: textContent?.type === 'text' ? textContent.text : '',
-    };
-
-    if (toolUseContent.length > 0) {
-      result.toolCalls = toolUseContent.map(tc => {
-        if (tc.type === 'tool_use') {
-          return {
-            name: tc.name,
-            arguments: tc.input,
-          };
-        }
-        return { name: '', arguments: {} };
-      }).filter(tc => tc.name);
     }
 
     return result;

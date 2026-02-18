@@ -42,7 +42,6 @@ npm install
 2. Configure your API key:
    - Copy `config.env.template` to `.env`
    - Add your OpenAI API key: `OPENAI_API_KEY=your_key_here`
-   - Or use Anthropic: Set `LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY=your_key_here`
 
 3. Build the project:
 ```bash
