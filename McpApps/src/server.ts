@@ -17,7 +17,39 @@ dotenv.config();
 const server = new McpServer({ name: 'pony-password-app', version: '1.0.0' });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UI_PATH = path.join(__dirname, 'ui', 'password-form.html');
+const UI_DIR = path.join(__dirname, 'ui');
+const UI_PATH = path.join(UI_DIR, 'password-form.html');
+const UI_CSS_PATH = path.join(UI_DIR, 'password-form.css');
+const UI_JS_PATH = path.join(UI_DIR, 'password-form.js');
+
+/**
+ * Build self-contained HTML for the password form (CSS and JS inlined).
+ * Required so the form looks correct when embedded in MCP App iframes (e.g. VS Code),
+ * where external /ui/... resources often do not load.
+ */
+function buildPasswordFormHtml(initialData: object, ponies: Pony[]): string {
+  let html = readFileSync(UI_PATH, 'utf-8');
+  const css = readFileSync(UI_CSS_PATH, 'utf-8');
+  const js = readFileSync(UI_JS_PATH, 'utf-8');
+
+  html = html.replace(
+    /<link\s+rel="stylesheet"\s+href="[^"]*password-form\.css"\s*\/?>/i,
+    `<style>${css}</style>`
+  );
+  html = html.replace(
+    /<script\s+src="[^"]*password-form\.js"\s*><\/script>/i,
+    `<script>${js}</script>`
+  );
+
+  const mcpServerUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3001}`;
+  const dataScript = `
+      <script>
+        window.__MCP_INITIAL_DATA__ = ${JSON.stringify({ initialData, ponies, mcpServerUrl })};
+      </script>
+    `;
+  html = html.replace('</head>', `${dataScript}</head>`);
+  return html;
+}
 
 /**
  * Tool that generates passwords with MCP App UI support
@@ -44,21 +76,35 @@ server.registerTool(
   },
   async ({ count = 5, minLength = 16, special = false, selectedPonies }) => {
     let ponies = loadPoniesFromFile();
-    
     if (selectedPonies && selectedPonies.length > 0) {
       ponies = ponies.filter(pony => {
-        const fullName = pony.last 
-          ? `${pony.first}${pony.last.replace(/\s+/g, '')}` 
+        const fullName = pony.last
+          ? `${pony.first}${pony.last.replace(/\s+/g, '')}`
           : pony.first;
         return selectedPonies.includes(fullName);
       });
     }
-    
     const pwds = buildMany(count, { minLength, special }, ponies);
-    
     return {
       content: [{ type: 'text', text: JSON.stringify(pwds) }],
       structuredContent: { result: pwds },
+    };
+  }
+);
+
+server.registerTool(
+  'sample_ponies',
+  {
+    title: 'Sample Pony Names',
+    description: 'Generates a list of suggested My Little Pony names (e.g. for the password form). Call this first if the user wants suggested or varied ponies, then pass the returned ponies as sampledPonies when calling pony_password_batch.',
+    inputSchema: z.object({}),
+    outputSchema: z.object({ ponies: z.array(z.object({ first: z.string(), last: z.string().optional() })) }),
+  },
+  async () => {
+    const ponies = await generatePoniesWithSampling();
+    return {
+      content: [{ type: 'text', text: JSON.stringify({ ponies }) }],
+      structuredContent: { ponies },
     };
   }
 );
@@ -99,19 +145,15 @@ registerToolHandler('sample_ponies', async () => {
 registerToolHandler('pony_password_batch', async (args: any) => {
   const { count = 5, minLength = 16, special = false, selectedPonies } = args;
   let ponies = loadPoniesFromFile();
-  
   if (selectedPonies && selectedPonies.length > 0) {
     ponies = ponies.filter(pony => {
-      const fullName = pony.last 
-        ? `${pony.first}${pony.last.replace(/\s+/g, '')}` 
+      const fullName = pony.last
+        ? `${pony.first}${pony.last.replace(/\s+/g, '')}`
         : pony.first;
       return selectedPonies.includes(fullName);
     });
   }
-  
   const pwds = buildMany(count, { minLength, special }, ponies);
-  
-  // Return in format expected by MCP SDK
   return {
     content: [{ type: 'text', text: JSON.stringify(pwds) }],
     structuredContent: { result: pwds },
@@ -131,29 +173,13 @@ server.registerResource(
     mimeType: 'text/html',
   },
   async (uri) => {
-    const html = readFileSync(UI_PATH, 'utf-8');
-    
     const allPonies = loadPoniesFromFile();
-    
-    // Inject initial data and ponies into the HTML
-    // We'll use a script tag to pass data to the app
-    // The initial data will be populated by the host when the tool is called
-    const dataScript = `
-      <script>
-        window.__MCP_INITIAL_DATA__ = {
-          initialData: {},
-          ponies: ${JSON.stringify(allPonies.slice(0, 15))}, // First 15 ponies for the form
-        };
-      </script>
-    `;
-    
-    const modifiedHtml = html.replace('</head>', `${dataScript}</head>`);
-    
+    const html = buildPasswordFormHtml({}, allPonies.slice(0, 15));
     return {
       contents: [
         {
           uri: uri.href,
-          text: modifiedHtml,
+          text: html,
           mimeType: 'text/html',
         },
       ],
@@ -163,12 +189,21 @@ server.registerResource(
 
 // Create HTTP server with streamable transport
 const app = express();
-app.use(cors({ 
-  origin: '*', 
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Accept', 'mcp-session-id', 'Mcp-Session-Id', 'Authorization'],
   exposedHeaders: ['mcp-session-id', 'Mcp-Session-Id'],
-  allowedHeaders: ['Content-Type', 'Accept', 'mcp-session-id', 'Mcp-Session-Id']
 }));
 app.use(express.json());
+
+app.options('/mcp', (_req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, mcp-session-id, Mcp-Session-Id, Authorization');
+  res.setHeader('Access-Control-Expose-Headers', 'mcp-session-id, Mcp-Session-Id');
+  res.sendStatus(204);
+});
 
 const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
 
@@ -185,30 +220,15 @@ app.get('/api/ui-resource', async (req: Request, res: Response) => {
     const args = req.query.args ? JSON.parse(decodeURIComponent(req.query.args as string)) : {};
     
     if (uri === 'ui://password-form') {
-      const html = readFileSync(UI_PATH, 'utf-8');
-      
-      let poniesToUse: any[] = [];
+      let poniesToUse: Pony[] = [];
       if (args.sampledPonies && Array.isArray(args.sampledPonies) && args.sampledPonies.length > 0) {
         poniesToUse = args.sampledPonies;
       } else {
-        const allPonies = loadPoniesFromFile();
-        poniesToUse = allPonies.slice(0, 15);
+        poniesToUse = loadPoniesFromFile().slice(0, 15);
       }
-      
-      const dataJson = JSON.stringify({
-        initialData: args,
-        ponies: poniesToUse,
-      });
-      
-      const dataScript = `
-        <script>
-          window.__MCP_INITIAL_DATA__ = ${dataJson};
-        </script>
-      `;
-      
-      const modifiedHtml = html.replace('</head>', `${dataScript}</head>`);
+      const html = buildPasswordFormHtml(args, poniesToUse);
       res.setHeader('Content-Type', 'text/html');
-      res.send(modifiedHtml);
+      res.send(html);
     } else {
       res.status(404).send('UI resource not found');
     }
@@ -253,21 +273,35 @@ app.post('/mcp', async (req: Request, res: Response) => {
       },
       async ({ count = 5, minLength = 16, special = false, selectedPonies }) => {
         let ponies = loadPoniesFromFile();
-        
         if (selectedPonies && selectedPonies.length > 0) {
           ponies = ponies.filter(pony => {
-            const fullName = pony.last 
-              ? `${pony.first}${pony.last.replace(/\s+/g, '')}` 
+            const fullName = pony.last
+              ? `${pony.first}${pony.last.replace(/\s+/g, '')}`
               : pony.first;
             return selectedPonies.includes(fullName);
           });
         }
-        
         const pwds = buildMany(count, { minLength, special }, ponies);
-        
         return {
           content: [{ type: 'text', text: JSON.stringify(pwds) }],
           structuredContent: { result: pwds },
+        };
+      }
+    );
+    
+    sessionServer.registerTool(
+      'sample_ponies',
+      {
+        title: 'Sample Pony Names',
+        description: 'Generates a list of suggested My Little Pony names (e.g. for the password form). Call this first if the user wants suggested or varied ponies, then pass the returned ponies as sampledPonies when calling pony_password_batch.',
+        inputSchema: z.object({}),
+        outputSchema: z.object({ ponies: z.array(z.object({ first: z.string(), last: z.string().optional() })) }),
+      },
+      async () => {
+        const ponies = await generatePoniesWithSampling();
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ ponies }) }],
+          structuredContent: { ponies },
         };
       }
     );
@@ -282,25 +316,13 @@ app.post('/mcp', async (req: Request, res: Response) => {
         mimeType: 'text/html',
       },
       async (uri) => {
-        const html = readFileSync(UI_PATH, 'utf-8');
         const allPonies = loadPoniesFromFile();
-        
-        const dataScript = `
-          <script>
-            window.__MCP_INITIAL_DATA__ = {
-              initialData: {},
-              ponies: ${JSON.stringify(allPonies.slice(0, 15))},
-            };
-          </script>
-        `;
-        
-        const modifiedHtml = html.replace('</head>', `${dataScript}</head>`);
-        
+        const html = buildPasswordFormHtml({}, allPonies.slice(0, 15));
         return {
           contents: [
             {
               uri: uri.href,
-              text: modifiedHtml,
+              text: html,
               mimeType: 'text/html',
             },
           ],

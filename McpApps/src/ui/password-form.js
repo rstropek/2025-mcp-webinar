@@ -1,7 +1,17 @@
 var mcpUrl = 'http://localhost:3001/mcp';
-if (window.parent && window.parent.location && window.parent.location.origin) {
-    mcpUrl = window.parent.location.origin + '/mcp';
-}
+(function() {
+    var data = window.__MCP_INITIAL_DATA__;
+    if (data && data.mcpServerUrl) {
+        mcpUrl = data.mcpServerUrl.replace(/\/$/, '') + '/mcp';
+        return;
+    }
+    try {
+        var origin = window.parent && window.parent.location && window.parent.location.origin;
+        if (origin && (origin.startsWith('http://') || origin.startsWith('https://')) && origin.indexOf('localhost') !== -1) {
+            mcpUrl = origin + '/mcp';
+        }
+    } catch (e) {}
+})();
 
 var mcpSessionId = null;
 var mcpSessionInitialized = false;
@@ -127,15 +137,44 @@ var windowData = window.__MCP_INITIAL_DATA__ || {};
 var initialData = windowData.initialData || {};
 var allPonies = windowData.ponies || [];
 
+var DEFAULTS = { count: 5, minLength: 16, special: false };
+var countVal = initialData.count != null ? Number(initialData.count) : DEFAULTS.count;
+var minLengthVal = initialData.minLength != null ? Number(initialData.minLength) : DEFAULTS.minLength;
+var specialVal = initialData.special != null ? !!initialData.special : DEFAULTS.special;
+var selectedPoniesVal = Array.isArray(initialData.selectedPonies) ? initialData.selectedPonies : [];
+
 var countEl = document.getElementById('count');
 var minLengthEl = document.getElementById('minLength');
 var specialEl = document.getElementById('special');
-if (countEl && initialData.count != null) countEl.value = Number(initialData.count);
-if (minLengthEl && initialData.minLength != null) minLengthEl.value = Number(initialData.minLength);
-if (specialEl && initialData.special != null) specialEl.checked = !!initialData.special;
+if (countEl) {
+    countEl.value = Math.min(50, Math.max(1, isNaN(countVal) ? DEFAULTS.count : countVal));
+}
+if (minLengthEl) {
+    minLengthEl.value = Math.max(1, isNaN(minLengthVal) ? DEFAULTS.minLength : minLengthVal);
+}
+if (specialEl) {
+    specialEl.checked = specialVal;
+}
 
 if (allPonies.length > 0) {
-    renderPonies(allPonies, []);
+    renderPonies(allPonies, selectedPoniesVal);
+}
+
+window.addEventListener('message', function(e) {
+    if (!e.data || e.data.type !== 'mcp-app-initial-data' || !e.data.initialData) return;
+    applyInitialData(e.data.initialData);
+});
+
+function applyInitialData(initialData) {
+    var d = initialData || {};
+    var countVal = d.count != null ? Number(d.count) : DEFAULTS.count;
+    var minLengthVal = d.minLength != null ? Number(d.minLength) : DEFAULTS.minLength;
+    var specialVal = d.special != null ? !!d.special : DEFAULTS.special;
+    var selectedPoniesVal = Array.isArray(d.selectedPonies) ? d.selectedPonies : [];
+    if (countEl) countEl.value = Math.min(50, Math.max(1, isNaN(countVal) ? DEFAULTS.count : countVal));
+    if (minLengthEl) minLengthEl.value = Math.max(1, isNaN(minLengthVal) ? DEFAULTS.minLength : minLengthVal);
+    if (specialEl) specialEl.checked = specialVal;
+    if (allPonies.length > 0) renderPonies(allPonies, selectedPoniesVal);
 }
 
 function renderPonies(ponies, selectedPonies) {
@@ -206,7 +245,7 @@ if (form) {
             var passwords = null;
             if (result && result.result && Array.isArray(result.result)) {
                 passwords = result.result;
-            } else if (result.content && result.content[0] && result.content[0].text) {
+            } else if (result && result.content && result.content[0] && result.content[0].text) {
                 passwords = JSON.parse(result.content[0].text);
             } else {
                 throw new Error('Invalid response from server');

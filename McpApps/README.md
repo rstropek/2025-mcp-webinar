@@ -95,10 +95,44 @@ The form will be pre-filled with these values, and the user can then:
 - **Sandboxed**: Runs in a secure iframe
 - **Pre-filled**: Automatically uses values from the conversation
 
+## MCP in VS Code / Cursor einbinden (HTTP)
+
+Damit du diesen MCP-Server **per HTTP** in VS Code oder Cursor nutzen kannst:
+
+1. **Server starten** (im Projektordner `McpApps`):
+   ```bash
+   cd McpApps && npm install && npm start
+   ```
+   Der MCP-Endpoint läuft unter `http://localhost:3001/mcp`.
+
+2. **In VS Code**: Workspace-Konfiguration in `.vscode/mcp.json` (im Repo-Root bereits vorhanden):
+   ```json
+   {
+     "servers": {
+       "pony-password": {
+         "type": "http",
+         "url": "http://localhost:3001/mcp"
+       }
+     }
+   }
+   ```
+   Oder: Command Palette → **MCP: Add Server** → Typ **HTTP** → URL `http://localhost:3001/mcp`.
+
+3. **In Cursor**: In den Einstellungen unter MCP den Server hinzufügen mit:
+   - **Transport**: Streamable HTTP
+   - **URL**: `http://localhost:3001/mcp`
+   
+   Im Repo liegt dafür `.cursor/mcp.json` mit der passenden Konfiguration.
+
+4. Beim ersten Verbinden ggf. **Vertrauen** bestätigen. Anschließend stehen die Tools (z. B. `pony_password_batch`, `sample_ponies`) und die interaktive App in Chat/Agent zur Verfügung.
+
+**Hinweis:** Der Server muss laufen, damit die Verbindung funktioniert. Port ist über `PORT` bzw. `.env` änderbar (Standard: 3001). In VS Code/Cursor kann der Formular-Button „Generate Passwords“ wegen Webview-Einschränkungen fehlschlagen; die Passwörter erhältst du trotzdem über den Tool-Aufruf der KI.
+
 ## Supported MCP Clients
 
 This MCP App works with clients that support MCP Apps extension:
 - Claude Desktop
 - VS Code (Insiders)
+- Cursor
 - Other MCP App-compatible clients
 
