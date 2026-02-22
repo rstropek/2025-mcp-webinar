@@ -1,0 +1,35 @@
+{
+  "name": "pony-password-mcp-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MCP server for Pony Password Generator (VS Code, Claude, ChatGPT). Uses @modelcontextprotocol/ext-apps.",
+  "main": "main.ts",
+  "scripts": {
+    "build": "npm run build:app",
+    "build:app": "cross-env INPUT=mcp-app.html vite build",
+    "build:server": "tsc -p tsconfig.server.json && node -e \"require('fs').cpSync('data','dist/data',{recursive:true})\"",
+    "start": "npm run build:app && tsx main.ts",
+    "start:stdio": "npm run build:app && tsx main.ts -- --stdio",
+    "dev": "concurrently \"npm run build:app -- --watch\" \"tsx main.ts\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.0.1",
+    "@modelcontextprotocol/sdk": "^1.27.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.2.2",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-singlefile": "^2.3.0"
+  },
+  "bin": {
+    "pony-password-mcp": "dist/main.js"
+  }
+}

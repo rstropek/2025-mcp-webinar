@@ -1,0 +1,26 @@
+{
+  "name": "mcp-pony-password-website",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Browser chat app with Pony Password form (no MCP server).",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node -e \"require('fs').cpSync('src/data','dist/data',{recursive:true})\"",
+    "start": "tsx src/server.ts",
+    "dev": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "openai": "^6.22.0",
+    "zod-to-json-schema": "^3.25.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.3.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
