@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Numbers (Interactive)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: auto; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--vscode-editor-background, #1e1e2e);
+            color: var(--vscode-editor-foreground, #cdd6f4);
+        }
+        .container { padding: 1rem 1.5rem; }
+        .form-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        input[type="number"] {
+            width: 6rem;
+            padding: 0.4rem 0.6rem;
+            font-size: 1.1rem;
+            font-family: inherit;
+            background: var(--vscode-input-background, #313244);
+            color: var(--vscode-input-foreground, #cdd6f4);
+            border: 1px solid var(--vscode-input-border, #45475a);
+            border-radius: 4px;
+            outline: none;
+        }
+        input[type="number"]:focus {
+            border-color: var(--vscode-focusBorder, #89b4fa);
+        }
+        .op-label {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--vscode-charts-yellow, #f9e2af);
+        }
+        button {
+            padding: 0.4rem 1rem;
+            font-size: 1.1rem;
+            font-family: inherit;
+            font-weight: 600;
+            background: var(--vscode-button-background, #89b4fa);
+            color: var(--vscode-button-foreground, #1e1e2e);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: var(--vscode-button-hoverBackground, #74c7ec);
+        }
+        .result {
+            margin-top: 0.8rem;
+            font-size: min(3rem, 7vw);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            width: fit-content;
+        }
+        .result .num { color: var(--vscode-charts-blue, #89b4fa); }
+        .result .op  { color: var(--vscode-charts-yellow, #f9e2af); margin: 0 0.2em; }
+        .result .eq  { color: var(--vscode-charts-green, #a6e3a1); margin: 0 0.2em; }
+        .result .val { color: var(--vscode-charts-orange, #fab387); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-row">
+            <input type="number" id="number1" value="3" step="any">
+            <span class="op-label">+</span>
+            <input type="number" id="number2" value="4" step="any">
+            <button id="addBtn">=</button>
+        </div>
+        <div id="result" class="result" style="display:none"></div>
+    </div>
+    <script>
+    (function() {
+        const number1El = document.getElementById('number1');
+        const number2El = document.getElementById('number2');
+        const resultDiv = document.getElementById('result');
+
+        let initId = 1;
+        const pending = new Map();
+
+        function send(msg) { window.parent.postMessage(msg, '*'); }
+
+        window.addEventListener('message', (event) => {
+            const msg = event.data;
+            if (!msg || typeof msg !== 'object') return;
+
+            // Response to our ui/initialize request
+            if (msg.id !== undefined && msg.id !== null && (msg.result !== undefined || msg.error !== undefined)) {
+                const resolve = pending.get(msg.id);
+                if (resolve) { pending.delete(msg.id); resolve(msg); }
+                return;
+            }
+
+            // Pre-fill from AI-provided arguments
+            if (msg.method === 'ui/notifications/tool-input') {
+                const args = msg.params?.arguments || {};
+                if (args.number1 !== undefined) number1El.value = args.number1;
+                if (args.number2 !== undefined) number2El.value = args.number2;
+            }
+
+            if (msg.method === 'ping' && msg.id !== undefined) {
+                send({ jsonrpc: '2.0', id: msg.id, result: {} });
+            }
+        });
+
+        // Connect to host so it sends tool-input
+        (async function() {
+            const id = initId++;
+            const p = new Promise(r => pending.set(id, r));
+            send({ jsonrpc: '2.0', id, method: 'ui/initialize', params: {
+                appInfo: { name: 'Interactive Adder', version: '1.0.0' },
+                appCapabilities: {},
+                protocolVersion: '2026-01-26'
+            }});
+            await p;
+            send({ jsonrpc: '2.0', method: 'ui/notifications/initialized', params: {} });
+            requestAnimationFrame(() => {
+                const rect = document.documentElement.getBoundingClientRect();
+                send({ jsonrpc: '2.0', method: 'ui/notifications/size-changed',
+                    params: { width: Math.ceil(rect.width), height: Math.ceil(rect.height) } });
+            });
+        })();
+
+        document.getElementById('addBtn').addEventListener('click', () => {
+            const n1 = parseFloat(number1El.value) || 0;
+            const n2 = parseFloat(number2El.value) || 0;
+            const sum = n1 + n2;
+
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML =
+                `<span class="num">${n1}</span>` +
+                `<span class="op">+</span>` +
+                `<span class="num">${n2}</span>` +
+                `<span class="eq">=</span>` +
+                `<span class="val">${sum}</span>`;
+
+            requestAnimationFrame(() => {
+                const rect = document.documentElement.getBoundingClientRect();
+                window.parent.postMessage({
+                    jsonrpc: '2.0',
+                    method: 'ui/notifications/size-changed',
+                    params: { width: Math.ceil(rect.width), height: Math.ceil(rect.height) }
+                }, '*');
+            });
+        });
+    })();
+    </script>
+</body>
+</html>
