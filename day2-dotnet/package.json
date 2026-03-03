@@ -10,11 +10,16 @@
     "build": "dotnet build",
     "test:client": "dotnet run --project McpClient"
   },
-  "keywords": ["mcp", "dotnet", "csharp", "password", "generator"],
+  "keywords": [
+    "mcp",
+    "dotnet",
+    "csharp",
+    "password",
+    "generator"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@modelcontextprotocol/inspector": "^0.17.1"
+    "@modelcontextprotocol/inspector": "^0.21.1"
   }
 }
-
