@@ -1,0 +1,12 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="../day2-dotnet/WinterPasswordLib/WinterPasswordLib.csproj" />
+  <Project Path="AppHost/AppHost.csproj" />
+  <Project Path="DemoServer/DemoServer.csproj" />
+  <Project Path="McpStreamableServer/McpStreamableServer.csproj" />
+  <Project Path="ServiceDefaults/ServiceDefaults.csproj" />
+</Solution>
