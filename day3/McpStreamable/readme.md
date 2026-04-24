@@ -1,56 +1,52 @@
-# Introduction to Model Context Protocol (MCP)
+# MCP with Streamable HTTP Transport
 
 ## Overview
 
-This repository contains samples for an introduction to the Model Context Protocol (MCP) using TypeScript and streamable HTTP transports.
+This project contains the MCP pony-password samples from day2, reimplemented over the **Streamable HTTP** transport. Each server runs as a long-lived HTTP process instead of a stdio child.
 
-Before you can get started with these samples, install the dependencies with `npm install`. Next, compile the samples with `npm run build`. You can start the different samples with the `npm run start:<sample-name>` commands (see the `scripts` section in `package.json` for all available samples).
+Install once with `npm install`, then start whichever sample you want. There is no build step required — `tsx` runs the TypeScript sources directly.
 
 ## Samples
 
-### Sample 1: MCP Server Without SDK
+### Sample 1: MCP Server Without SDK (streamable)
 
-This sample demonstrates how to set up an MCP server without using the MCP SDK. It communicates with the MCP client using raw jsonRPC messages. **Do not write MCP server like this in production!** This is just for educational purposes to show how the protocol works under the hood.
+`src/server-no-sdk-streamable.ts` — implements just enough of the MCP wire format (initialize / tools/list / tools/call) to serve a single tool over plain HTTP POST. No session management, no SSE. Intentionally bare; for a spec-compliant server see Sample 2.
 
-The MCP server can generate passwords by concatenating character names from the TV show _My Little Pony_.
+Start with:
 
-### Sample 2: MCP Server With SDK
+```bash
+npm run start:no-sdk-streamable   # listens on http://127.0.0.1:3002/mcp
+npm run inspect:no-sdk            # in another terminal
+```
 
-The second sample implements the same functionality as the first sample, but this time it uses the MCP SDK. This makes the implementation much simpler and more robust.
+### Sample 2: MCP Server With SDK (streamable)
 
-The sample contains tools, a prompt, and a resource.
+`src/server-sdk-streamable.ts` — same feature set as the day2 SDK server (tools, prompt, resource) plus an elicitation tool (`pony_password_with_preferences`) that asks the client which ponies to exclude. Uses the shared harness in `src/lib/streamable-http.ts` for session management and CORS.
 
-### Sample 3: MCP Server With Sampling
+Start with:
 
-This example introduces the concept of sampling in MCP. The server can generate passwords by sampling characters from _My Little Pony_.
+```bash
+npm run start:sdk-streamable      # listens on http://127.0.0.1:3000/mcp
+npm run inspect:sdk               # in another terminal
+```
 
-### Sample 4: MCP Server With Sampling and Image Processing
+### Sample 3: Streamable MCP Client
 
-This example shows how to work with content that is not text. It implements an MCP server that uses sampling to verify images. If you want to try this MCP server, perform the following steps:
+`src/client-streamable.ts` — connects to the SDK server on port 3000, lists tools/prompts/resources, and exercises each one.
 
-1. Run the sample web server with `npm run start:server`.
-2. Enable the `Verify Image` tool in the [MCP configuration](./.vscode/mcp.json).
-3. Try the following prompt:
+```bash
+npm run start:sdk-streamable      # server must be running first
+npm run client:streamable
+```
 
-   ```
-   Use the playwright mcp server to open http://localhost:3000/ and create a screenshot. Then use the verify-image MCP server to check if the screenshot claims that C# is "awesome".
-   ```
+## Scripts
 
-### Sample 5: Streamable HTTP Servers
-
-All servers now have streamable HTTP versions that can be deployed as web services instead of local processes. These implementations provide session management, automatic transport cleanup, and health monitoring capabilities.
-
-**Available Streamable Servers:**
-- `npm run start:sdk-streamable` (Port 3000)
-- `npm run start:sampling-streamable` (Port 3001)  
-- `npm run start:no-sdk-streamable` (Port 3002)
-- `npm run start:verify-image-streamable` (Port 3003)
-
-**Test with MCP Inspector:**
-- `npm run inspect:sdk-streamable`
-- `npm run inspect:sampling-streamable`
-- `npm run inspect:no-sdk-streamable`
-- `npm run inspect:verify-image-streamable`
-
-**Test with Streamable Client (configured for sdk-streamable):**
-- `npm run client:streamable`
+| Script | Description |
+| --- | --- |
+| `start:sdk-streamable` | SDK-based server (port 3000) |
+| `start:no-sdk-streamable` | Raw JSON-RPC server (port 3002) |
+| `inspect:sdk` | MCP Inspector against port 3000 |
+| `inspect:no-sdk` | MCP Inspector against port 3002 |
+| `client:streamable` | Example client against port 3000 |
+| `build` | Type-check and copy `src/data` into `dist/` |
+| `check` | Run Biome (lint + format) with autofix |
