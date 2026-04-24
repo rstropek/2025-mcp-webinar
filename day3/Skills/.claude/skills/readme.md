@@ -1,1 +1,0 @@
-Source: https://github.com/anthropics/skills/tree/main/mcp-builder
