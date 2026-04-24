@@ -57,7 +57,32 @@ server.registerTool(
 			maxTokens: 800,
 		});
 
-		const raw = sampling.content.type === "text" ? sampling.content.text : "";
+		let raw = "";
+		const c = sampling.content as unknown;
+		if (Array.isArray(c)) {
+			raw = c
+				.filter(
+					(b): b is { type: "text"; text: string } =>
+						typeof b === "object" &&
+						b !== null &&
+						(b as { type?: unknown }).type === "text",
+				)
+				.map((b) => b.text)
+				.join("");
+		} else if (
+			typeof c === "object" &&
+			c !== null &&
+			(c as { type?: unknown }).type === "text"
+		) {
+			raw = (c as { text: string }).text;
+		}
+
+		const fenced = raw
+			.trim()
+			.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/i);
+		if (fenced) {
+			raw = fenced[1];
+		}
 		let ponies: { first: string; last?: string }[] = [];
 		try {
 			const parsed = JSON.parse(raw);
