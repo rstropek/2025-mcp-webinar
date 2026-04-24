@@ -1,4 +1,4 @@
-import { createServer } from "http";
+import { createServer } from "node:http";
 
 const html = `
 <!DOCTYPE html>
@@ -23,12 +23,12 @@ const html = `
 </html>
 `;
 
-const server = createServer((req, res) => {
-  res.writeHead(200, { "Content-Type": "text/html" });
-  res.end(html);
+const server = createServer((_req, res) => {
+	res.writeHead(200, { "Content-Type": "text/html" });
+	res.end(html);
 });
 
 const PORT = 3000;
 server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+	console.log(`Server running at http://localhost:${PORT}`);
 });

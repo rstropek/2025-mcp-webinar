@@ -1,27 +1,29 @@
 {
-  "name": "mcp_mylittlepony",
-  "version": "1.0.0",
-  "main": "index.ts",
-  "scripts": {
-    "build": "tsc && cp -r src/data dist/",
-    "start:server": "tsx ./src/server.ts",
-    "start:no-sdk": "npx @modelcontextprotocol/inspector tsx ./src/server-no-sdk.ts",
-    "start:sdk": "npx @modelcontextprotocol/inspector tsx ./src/server-sdk.ts",
-    "start:sampling": "npx @modelcontextprotocol/inspector tsx ./src/server-sampling.ts",
-    "start:verify-image": "npx @modelcontextprotocol/inspector tsx ./src/verify-image.ts"
-  },
-  "keywords": [],
-  "author": "",
-  "type": "module",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "@modelcontextprotocol/inspector": "^0.20.0",
-    "@modelcontextprotocol/sdk": "^1.20.1"
-  },
-  "devDependencies": {
-    "@types/node": "^25.2.1",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
-  }
+	"name": "mcp_mylittlepony",
+	"version": "1.0.0",
+	"main": "index.ts",
+	"scripts": {
+		"build": "tsc && cp -r src/data dist/",
+		"start:testpage": "tsx ./src/testpage.ts",
+		"start:no-sdk": "npx @modelcontextprotocol/inspector tsx ./src/server-no-sdk.ts",
+		"start:sdk": "npx @modelcontextprotocol/inspector tsx ./src/server-sdk.ts",
+		"start:sampling": "npx @modelcontextprotocol/inspector tsx ./src/server-sampling.ts",
+		"start:verify-image": "npx @modelcontextprotocol/inspector tsx ./src/verify-image.ts",
+		"check": "biome check . --write"
+	},
+	"keywords": [],
+	"author": "",
+	"type": "module",
+	"license": "ISC",
+	"description": "",
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.20.1"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.13",
+		"@modelcontextprotocol/inspector": "^0.21.2",
+		"@types/node": "^25.2.1",
+		"tsx": "^4.21.0",
+		"typescript": "^6.0.3"
+	}
 }
