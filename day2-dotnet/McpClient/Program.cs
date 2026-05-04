@@ -8,7 +8,7 @@ var transport = new StdioClientTransport(new StdioClientTransportOptions
     Arguments = ["run", "--project", "McpServerSdk", "--no-build"]
 });
 
-var client = await McpClient.CreateAsync(transport);
+await using var client = await McpClient.CreateAsync(transport);
 
 Console.WriteLine(">>> List of tools:");
 
@@ -75,6 +75,4 @@ catch (Exception ex)
     Console.Error.WriteLine($"Error calling batch tool: {ex.Message}");
 }
 
-Console.WriteLine("\n>>> Disconnecting...");
-// Transport will be disposed automatically
-Console.WriteLine(">>> Done!");
+Console.WriteLine("\n>>> Done!");

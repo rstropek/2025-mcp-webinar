@@ -29,22 +29,26 @@ public static partial class WinterPasswordSamplingTools
             var response = await server.AsSamplingChatClient().GetResponseAsync(
                 [
                     new ChatMessage(
-                        ChatRole.User, 
-                        """
+                        ChatRole.User,
+                        """"
                         Generate a JSON array of 30 distinct winter-related words in German.
 
                         Rules:
-                        - Each entry must be an object with a \"word\" property containing a SINGLE word (no spaces).
+                        - Each entry must be an object with a "word" property containing a SINGLE word (no spaces).
                         - Words should be CamelCase strings with letters only (A-Z, a-z).
                         - No spaces, no punctuation, no digits.
-                        Example: [{\"word\":\"Schneeflocke\"},{\"word\":\"Eiskälte\"},{\"word\":\"Frost\"}]
+                        Example: [{"word":"Schneeflocke"},{"word":"Eiskälte"},{"word":"Frost"}]
 
-                        Return ONLY the JSON array WITHOUT any additional text or Markdown code (including backticks)."
-                        """)
+                        Return ONLY the JSON array WITHOUT any additional text or Markdown code (including backticks).
+                        """")
                 ],
                 new ChatOptions { },
                 CancellationToken.None);
             raw = response.ToString() ?? "";
+
+            // LLMs sometimes wrap JSON in ```json ... ``` fences despite instructions; strip them.
+            var fenced = FencedJsonRegex().Match(raw.Trim());
+            if (fenced.Success) { raw = fenced.Groups[1].Value; }
 
             WinterWord[] winterWords;
             winterWords = JsonSerializer.Deserialize<WinterWord[]>(raw, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }) ?? throw new Exception("null result");
@@ -81,4 +85,7 @@ public static partial class WinterPasswordSamplingTools
 
     [GeneratedRegex(@"^[A-Za-z]+$")]
     private static partial Regex MyRegex();
+
+    [GeneratedRegex(@"^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$", RegexOptions.IgnoreCase)]
+    private static partial Regex FencedJsonRegex();
 }

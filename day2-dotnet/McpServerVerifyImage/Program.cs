@@ -52,7 +52,7 @@ public static class VerifyImageTools
             var response = await server.AsSamplingChatClient().GetResponseAsync(
                 [
                     new ChatMessage(ChatRole.User, [ new TextContent(prompt), ]),
-                    new ChatMessage(ChatRole.Tool, [ new DataContent(imageBytes, mimeType) ])
+                    new ChatMessage(ChatRole.User, [ new DataContent(imageBytes, mimeType) ])
                 ],
                 new ChatOptions { },
                 CancellationToken.None);

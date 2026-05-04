@@ -54,11 +54,10 @@ void Send(JsonRpcMessage message)
 void HandleInitialize(object? id)
 {
     var result = new InitializeResult(
-        ProtocolVersion: "2024-11-05", // Current version of MCP
+        ProtocolVersion: "2025-11-25", // Current version of MCP
         ServerInfo: new ServerInfo("winter-no-sdk", "0.1.0"),
         Capabilities: new Capabilities(
-            Tools: new ToolsCapability(ListChanged: true),
-            Prompts: new PromptsCapability(ListChanged: true)
+            Tools: new ToolsCapability(ListChanged: true)
         )
     );
     Send(new JsonRpcMessage(Id: id, Result: result));
@@ -150,15 +149,10 @@ record ServerInfo(
 );
 
 record Capabilities(
-    ToolsCapability Tools,
-    PromptsCapability Prompts
+    ToolsCapability Tools
 );
 
 record ToolsCapability(
-    bool ListChanged
-);
-
-record PromptsCapability(
     bool ListChanged
 );
 
