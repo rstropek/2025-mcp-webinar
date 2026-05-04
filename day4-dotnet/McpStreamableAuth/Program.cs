@@ -74,11 +74,11 @@ builder.Services.AddAuthentication(options =>
 {
     options.ResourceMetadata = new()
     {
-        ResourceDocumentation = new Uri("https://docs.example.com/api/weather"),
-        AuthorizationServers = { new Uri(builder.Configuration["Scalekit:EnvironmentUrl"]!) },
+        ResourceDocumentation = "https://docs.example.com/api/weather",
+        AuthorizationServers = { builder.Configuration["Scalekit:EnvironmentUrl"]! },
         ScopesSupported = ["ponypwd:generate"],
     };
-});;
+});
 
 builder.Services.AddAuthorization();
 
@@ -242,7 +242,7 @@ public static class WinterPasswordPrompts
         [Description("Minimum length of the password")] string minLength = "16",
         [Description("Enable special character replacement")] string special = "false")
     {
-        var specialBool = special.ToLower() == "true";
+        var specialBool = bool.TryParse(special, out var s) && s;
         return new ChatMessage(
             ChatRole.User,
             $"""
