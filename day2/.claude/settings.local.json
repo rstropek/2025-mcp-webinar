@@ -6,7 +6,8 @@
       "Bash(npm install *)",
       "Bash(npx @biomejs/biome init)",
       "Bash(npm run *)",
-      "Bash(npx biome *)"
+      "Bash(npx biome *)",
+      "WebFetch(domain:code.visualstudio.com)"
     ]
   }
 }
