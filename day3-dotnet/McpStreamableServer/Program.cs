@@ -62,7 +62,7 @@ public static class WinterPasswordTools
         [Description("Minimum length of the password")] int minLength = 16,
         [Description("Enable special character replacement")] bool special = false)
     {
-        using var activity = source.StartActivity("Calling gRPC Greeter");
+        using var activity = source.StartActivity("WinterPassword");
         activity?.SetTag("minLength", minLength);
         activity?.SetTag("special", special);
         
@@ -77,7 +77,7 @@ public static class WinterPasswordTools
         [Description("Minimum length of the password")] int minLength = 16,
         [Description("Enable special character replacement")] bool special = false)
     {
-        using var activity = source.StartActivity("Calling gRPC Greeter for batch");
+        using var activity = source.StartActivity("WinterPasswordBatch");
         activity?.SetTag("count", count);
         activity?.SetTag("minLength", minLength);
         activity?.SetTag("special", special);
@@ -177,7 +177,7 @@ public static class WinterPasswordPrompts
         [Description("Minimum length of the password")] string minLength = "16",
         [Description("Enable special character replacement")] string special = "false")
     {
-        var specialBool = special.ToLower() == "true";
+        var specialBool = bool.TryParse(special, out var s) && s;
         return new ChatMessage(
             ChatRole.User,
             $"""

@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.0.0">
+<Project Sdk="Aspire.AppHost.Sdk/13.2.4">
 
   <ItemGroup>
     <ProjectReference Include="..\DemoServer\DemoServer.csproj" />
