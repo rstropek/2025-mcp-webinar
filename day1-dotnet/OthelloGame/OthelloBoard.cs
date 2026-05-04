@@ -14,23 +14,24 @@ public record ValidMovesResult(List<Move> Moves);
 
 public record GameStatistics(int Black, int White);
 
-public class InvalidBoardResult
-{
-    public string Error { get; }
-
-    public InvalidBoardResult(string error)
-    {
-        Error = error;
-    }
-}
-
 public class OthelloBoard
 {
-    private string[][] _board;
-    private Player _currentPlayer;
+    public const char Black = 'B';
+    public const char White = 'W';
+    public const char Empty = '.';
     private const int BoardSize = 8;
 
-    private OthelloBoard(string[][] board, Player currentPlayer = Player.Black)
+    private static readonly (int dr, int dc)[] Directions =
+    [
+        (-1, -1), (-1, 0), (-1, 1),
+        ( 0, -1),          ( 0, 1),
+        ( 1, -1), ( 1, 0), ( 1, 1)
+    ];
+
+    private readonly char[,] _board;
+    private Player _currentPlayer;
+
+    private OthelloBoard(char[,] board, Player currentPlayer)
     {
         _board = board;
         _currentPlayer = currentPlayer;
@@ -38,245 +39,232 @@ public class OthelloBoard
 
     public static OthelloBoard CreateEmpty()
     {
-        var board = new OthelloBoard([], Player.Black);
-        board.Reset();
-        return board;
+        var board = new char[BoardSize, BoardSize];
+        for (int r = 0; r < BoardSize; r++)
+        {
+            for (int c = 0; c < BoardSize; c++)
+            {
+                board[r, c] = Empty;
+            }
+        }
+        board[3, 3] = White;
+        board[3, 4] = Black;
+        board[4, 3] = Black;
+        board[4, 4] = White;
+        return new OthelloBoard(board, Player.Black);
     }
 
-    public static object FromString(string boardString, Player currentPlayer = Player.Black)
+    public static bool TryFromString(
+        string boardString,
+        out OthelloBoard? board,
+        out string? error,
+        Player currentPlayer = Player.Black)
     {
+        board = null;
         var rows = boardString.Split('\n');
 
         if (rows.Length != BoardSize)
         {
-            return new InvalidBoardResult("Board must contain exactly 8 rows.");
+            error = "Board must contain exactly 8 rows.";
+            return false;
         }
 
-        foreach (var row in rows)
+        var cells = new char[BoardSize, BoardSize];
+        for (int r = 0; r < BoardSize; r++)
         {
+            var row = rows[r];
             if (row.Length != BoardSize)
             {
-                return new InvalidBoardResult("Each row must contain exactly 8 fields.");
+                error = "Each row must contain exactly 8 fields.";
+                return false;
             }
 
-            if (!System.Text.RegularExpressions.Regex.IsMatch(row, @"^[BW.]+$"))
+            for (int c = 0; c < BoardSize; c++)
             {
-                return new InvalidBoardResult("Board can only contain the characters B, W, or .");
+                var ch = row[c];
+                if (ch != Black && ch != White && ch != Empty)
+                {
+                    error = "Board can only contain the characters B, W, or .";
+                    return false;
+                }
+                cells[r, c] = ch;
             }
         }
 
-        var board = rows.Select(row => row.Select(c => c.ToString()).ToArray()).ToArray();
-        return new OthelloBoard(board, currentPlayer);
+        error = null;
+        board = new OthelloBoard(cells, currentPlayer);
+        return true;
     }
 
-    public void Reset()
-    {
-        _board =
-        [
-            [".", ".", ".", ".", ".", ".", ".", "."],
-            [".", ".", ".", ".", ".", ".", ".", "."],
-            [".", ".", ".", ".", ".", ".", ".", "."],
-            [".", ".", ".", "W", "B", ".", ".", "."],
-            [".", ".", ".", "B", "W", ".", ".", "."],
-            [".", ".", ".", ".", ".", ".", ".", "."],
-            [".", ".", ".", ".", ".", ".", ".", "."],
-            [".", ".", ".", ".", ".", ".", ".", "."]
-        ];
-        _currentPlayer = Player.Black;
-    }
+    public Player GetCurrentPlayer() => _currentPlayer;
 
-    public Player GetCurrentPlayer()
-    {
-        return _currentPlayer;
-    }
+    private static char PieceOf(Player player) => player == Player.Black ? Black : White;
+
+    private static char EnemyOf(Player player) => player == Player.Black ? White : Black;
 
     private List<Position>? GetMoveResult(Position position, Player player)
     {
-        // Check if position is on board
-        if (!IsOnBoard(position.Row, position.Col))
-        {
-            return null;
-        }
+        if (!IsOnBoard(position.Row, position.Col)) return null;
+        if (_board[position.Row, position.Col] != Empty) return null;
 
-        // Check if position is empty
-        var currentCell = _board[position.Row][position.Col];
-        if (currentCell != ".")
-        {
-            return null;
-        }
+        var enemy = EnemyOf(player);
+        var piece = PieceOf(player);
+        var flipped = new List<Position>();
 
-        var enemy = player == Player.Black ? "W" : "B";
-        var playerChar = player == Player.Black ? "B" : "W";
-        var directions = new[]
+        foreach (var (dr, dc) in Directions)
         {
-            (-1, -1), (-1, 0), (-1, 1),
-            (0, -1), (0, 1),
-            (1, -1), (1, 0), (1, 1)
-        };
-
-        var flippedPositions = new List<Position>();
-
-        foreach (var (deltaRow, deltaCol) in directions)
-        {
-            var r = position.Row + deltaRow;
-            var c = position.Col + deltaCol;
+            var r = position.Row + dr;
+            var c = position.Col + dc;
             var path = new List<Position>();
 
-            while (IsOnBoard(r, c) && _board[r][c] == enemy)
+            while (IsOnBoard(r, c) && _board[r, c] == enemy)
             {
                 path.Add(new Position(r, c));
-                r += deltaRow;
-                c += deltaCol;
+                r += dr;
+                c += dc;
             }
 
-            if (path.Count > 0 && IsOnBoard(r, c) && _board[r][c] == playerChar)
+            if (path.Count > 0 && IsOnBoard(r, c) && _board[r, c] == piece)
             {
-                flippedPositions.AddRange(path);
+                flipped.AddRange(path);
             }
         }
 
-        return flippedPositions.Count > 0 ? flippedPositions : null;
+        return flipped.Count > 0 ? flipped : null;
     }
 
-    public ValidMovesResult GetValidMoves()
+    public ValidMovesResult GetValidMoves() => GetValidMoves(_currentPlayer);
+
+    public ValidMovesResult GetValidMoves(Player player)
     {
         var moves = new List<Move>();
-
         for (int row = 0; row < BoardSize; row++)
         {
             for (int col = 0; col < BoardSize; col++)
             {
-                var flippedPositions = GetMoveResult(new Position(row, col), _currentPlayer);
-
-                if (flippedPositions != null)
+                var flipped = GetMoveResult(new Position(row, col), player);
+                if (flipped != null)
                 {
-                    moves.Add(new Move(new Position(row, col), flippedPositions));
+                    moves.Add(new Move(new Position(row, col), flipped));
                 }
             }
         }
-
         return new ValidMovesResult(moves);
+    }
+
+    public bool HasValidMoves(Player player)
+    {
+        for (int row = 0; row < BoardSize; row++)
+        {
+            for (int col = 0; col < BoardSize; col++)
+            {
+                if (GetMoveResult(new Position(row, col), player) != null) return true;
+            }
+        }
+        return false;
+    }
+
+    public bool IsGameOver() => !HasValidMoves(Player.Black) && !HasValidMoves(Player.White);
+
+    public void PassTurn()
+    {
+        _currentPlayer = _currentPlayer == Player.Black ? Player.White : Player.Black;
     }
 
     public GameStatistics GetGameStatistics()
     {
-        int black = 0;
-        int white = 0;
-
+        int black = 0, white = 0;
         for (int row = 0; row < BoardSize; row++)
         {
             for (int col = 0; col < BoardSize; col++)
             {
-                var cell = _board[row][col];
-                if (cell == "B")
-                {
-                    black++;
-                }
-                else if (cell == "W")
-                {
-                    white++;
-                }
+                var cell = _board[row, col];
+                if (cell == Black) black++;
+                else if (cell == White) white++;
             }
         }
-
         return new GameStatistics(black, white);
     }
 
     public bool TryApplyMove(Position position)
     {
-        // Verify the move is valid for the current player
-        var flippedPositions = GetMoveResult(position, _currentPlayer);
-        if (flippedPositions == null)
+        var flipped = GetMoveResult(position, _currentPlayer);
+        if (flipped == null) return false;
+
+        var piece = PieceOf(_currentPlayer);
+        _board[position.Row, position.Col] = piece;
+        foreach (var p in flipped)
         {
-            return false;
+            _board[p.Row, p.Col] = piece;
         }
 
-        var playerChar = _currentPlayer == Player.Black ? "B" : "W";
-
-        // Place the player's piece at the move position
-        _board[position.Row][position.Col] = playerChar;
-
-        // Flip all opponent pieces
-        foreach (var flippedPos in flippedPositions)
-        {
-            _board[flippedPos.Row][flippedPos.Col] = playerChar;
-        }
-
-        // Switch to the other player
         _currentPlayer = _currentPlayer == Player.Black ? Player.White : Player.Black;
-
         return true;
     }
 
     public bool TryApplyMove(string positionStr)
     {
-        var (success, pos) = ParsePosition(positionStr);
-        if (!success)
-        {
-            return false;
-        }
-
-        return TryApplyMove(pos);
+        return TryParsePosition(positionStr, out var pos) && TryApplyMove(pos);
     }
 
     public override string ToString()
     {
-        return string.Join("\n", _board.Select(row => string.Join("", row)));
+        var sb = new System.Text.StringBuilder(BoardSize * (BoardSize + 1));
+        for (int r = 0; r < BoardSize; r++)
+        {
+            if (r > 0) sb.Append('\n');
+            for (int c = 0; c < BoardSize; c++)
+            {
+                sb.Append(_board[r, c]);
+            }
+        }
+        return sb.ToString();
     }
 
     public string ToFormattedString()
     {
-        var lines = new List<string>();
-
-        lines.Add("   A B C D E F G H");
-        lines.Add("  ┌───────────────┐");
+        var lines = new List<string>
+        {
+            "   A B C D E F G H",
+            "  ┌───────────────┐"
+        };
 
         for (int row = 0; row < BoardSize; row++)
         {
-            var rowNum = row + 1;
-            var cells = string.Join(" ", _board[row].Select(cell =>
+            var sb = new System.Text.StringBuilder();
+            sb.Append(row + 1).Append(" │");
+            for (int col = 0; col < BoardSize; col++)
             {
-                if (cell == "B") return "●"; // Black disc
-                if (cell == "W") return "○"; // White disc
-                return " "; // Empty
-            }));
-            lines.Add($"{rowNum} │{cells}│");
+                if (col > 0) sb.Append(' ');
+                sb.Append(_board[row, col] switch
+                {
+                    Black => '●',
+                    White => '○',
+                    _ => ' '
+                });
+            }
+            sb.Append('│');
+            lines.Add(sb.ToString());
         }
 
         lines.Add("  └───────────────┘");
-
         return string.Join("\n", lines);
     }
 
-    private static bool IsOnBoard(int row, int col)
+    private static bool IsOnBoard(int row, int col) =>
+        row >= 0 && row < BoardSize && col >= 0 && col < BoardSize;
+
+    public static bool TryParsePosition(string position, out Position result)
     {
-        return row >= 0 && row < BoardSize && col >= 0 && col < BoardSize;
-    }
+        result = default!;
+        if (position is null || position.Length < 2 || position.Length > 3) return false;
 
-    private static (bool success, Position position) ParsePosition(string position)
-    {
-        if (position.Length < 2 || position.Length > 3)
-        {
-            return (false, default!);
-        }
+        var colChar = char.ToUpperInvariant(position[0]);
+        if (colChar < 'A' || colChar > 'H') return false;
 
-        var colChar = char.ToUpper(position[0]);
-        var rowStr = position.Substring(1);
+        if (!int.TryParse(position.AsSpan(1), out var row) || row < 1 || row > BoardSize) return false;
 
-        // Parse column (A-H)
-        if (colChar < 'A' || colChar > 'H')
-        {
-            return (false, default!);
-        }
-        var col = colChar - 'A';
-
-        // Parse row (1-8)
-        if (!int.TryParse(rowStr, out var row) || row < 1 || row > 8)
-        {
-            return (false, default!);
-        }
-
-        return (true, new Position(row - 1, col));
+        result = new Position(row - 1, colChar - 'A');
+        return true;
     }
 }
-
