@@ -132,8 +132,8 @@ This solution depends on:
 
 - **.NET 10.0**: The target framework for all projects
 - **WinterPasswordLib**: Shared library from day2-dotnet for password generation
-- **ModelContextProtocol.AspNetCore**: MCP SDK for ASP.NET Core (v0.4.1-preview.1)
-- **Microsoft.Extensions.AI**: AI abstractions for .NET (v10.0.1)
+- **ModelContextProtocol.AspNetCore**: MCP SDK for ASP.NET Core
+- **Microsoft.Extensions.AI**: AI abstractions for .NET
 - **.NET Aspire**: Orchestration and observability framework
 
 ## Key Concepts Demonstrated
