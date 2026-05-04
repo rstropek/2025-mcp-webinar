@@ -6,7 +6,6 @@ using ModelContextProtocol.Server;
 public static class AdderTools
 {
     [McpServerTool(Name = "add_numbers"), Description("Adds two numbers and displays the result in a visual UI")]
-    [McpMeta("ui/resourceUri", "ui://adder/view.html")]
     [McpMeta("ui", JsonValue = """{"resourceUri":"ui://adder/view.html"}""")]
     public static string AddNumbers(
         [Description("First number")] double number1 = 3,
@@ -16,7 +15,6 @@ public static class AdderTools
     }
 
     [McpServerTool(Name = "add_numbers_interactive"), Description("Opens an interactive form where the user can enter two numbers and compute their sum")]
-    [McpMeta("ui/resourceUri", "ui://adder/interactive.html")]
     [McpMeta("ui", JsonValue = """{"resourceUri":"ui://adder/interactive.html"}""")]
     public static string AddNumbersInteractive(
         [Description("First number (pre-filled in form)")] double number1 = 3,
