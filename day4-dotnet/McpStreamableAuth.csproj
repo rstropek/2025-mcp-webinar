@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\day2-dotnet\WinterPasswordLib\WinterPasswordLib.csproj" />
+    <ProjectReference Include="..\day2-dotnet\WinterPasswordLib\WinterPasswordLib.csproj" />
   </ItemGroup>
 
   <ItemGroup>
