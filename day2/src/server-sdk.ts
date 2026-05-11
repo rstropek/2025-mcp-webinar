@@ -7,6 +7,10 @@ import { loadPoniesFromFile, toOnePerLine } from "./lib/ponies.js";
 
 const server = new McpServer({ name: "pony-sdk", version: "0.1.0" });
 
+// Read the pony list once at startup. The file never changes during the
+// process's lifetime, so re-reading on every tool call would just be noise.
+const ponies = loadPoniesFromFile();
+
 /** Tool 1: single password */
 server.registerTool(
 	"pony_password",
@@ -20,7 +24,6 @@ server.registerTool(
 		outputSchema: { result: z.string() },
 	},
 	({ minLength, special }) => {
-		const ponies = loadPoniesFromFile();
 		const output = buildPassword({ minLength, special }, ponies);
 		return {
 			content: [{ type: "text", text: output }],
@@ -43,10 +46,11 @@ server.registerTool(
 		outputSchema: { result: z.array(z.string()) },
 	},
 	({ count, minLength, special }) => {
-		const ponies = loadPoniesFromFile();
 		const pwds = buildMany(count, { minLength, special }, ponies);
+		// Human-readable text fallback (one per line) for hosts that don't read
+		// structuredContent. The typed array still flows via structuredContent.
 		return {
-			content: [{ type: "text", text: JSON.stringify(pwds) }],
+			content: [{ type: "text", text: pwds.map((p, i) => `${i + 1}. ${p}`).join("\n") }],
 			structuredContent: { result: pwds },
 		};
 	},
@@ -95,11 +99,10 @@ server.registerResource(
 		mimeType: "text/plain; charset=utf-8",
 	},
 	(uri) => {
-		const ponies = loadPoniesFromFile();
 		const text = toOnePerLine(ponies);
 		return { contents: [{ uri: uri.href, text }] };
 	},
 );
 
 const transport = new StdioServerTransport();
-server.connect(transport);
+await server.connect(transport);

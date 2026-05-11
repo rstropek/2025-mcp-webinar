@@ -11,8 +11,19 @@ app.use(express.json());
 app.use(
 	cors({
 		origin: "*",
-		// Note: In CORS, "exposed headers" are the HTTP response headers that the browser
-		// is allowed to make visible to JavaScript code running in the web page.
+		methods: ["GET", "POST", "DELETE", "OPTIONS"],
+		// `allowedHeaders` lists the headers the browser is permitted to SEND
+		// in cross-origin requests. Without `Mcp-Session-Id` and
+		// `Mcp-Protocol-Version` here, browser-based MCP clients fail at
+		// preflight. (curl is unaffected — it skips CORS.)
+		allowedHeaders: [
+			"Content-Type",
+			"Mcp-Session-Id",
+			"Mcp-Protocol-Version",
+		],
+		// `exposedHeaders` lists the headers the browser is permitted to READ
+		// off the response — needed so clients can pick up the session id from
+		// the initialize response.
 		exposedHeaders: ["Mcp-Session-Id"],
 	}),
 );

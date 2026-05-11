@@ -7,6 +7,9 @@ import { createStreamableHTTPServer } from "./lib/streamable-http.js";
 
 const server = new McpServer({ name: "pony-sdk-streamable", version: "0.1.0" });
 
+// Read the pony list once at startup; the file is static.
+const ponies = loadPoniesFromFile();
+
 /** Tool 1: single password */
 server.registerTool(
 	"pony_password",
@@ -20,7 +23,6 @@ server.registerTool(
 		outputSchema: { result: z.string() },
 	},
 	({ minLength, special }) => {
-		const ponies = loadPoniesFromFile();
 		const output = buildPassword({ minLength, special }, ponies);
 		return {
 			content: [{ type: "text", text: output }],
@@ -42,43 +44,54 @@ server.registerTool(
 		outputSchema: { result: z.string() },
 	},
 	async ({ minLength, special }) => {
-		let ponies = loadPoniesFromFile();
-		const result = await server.server.elicitInput({
-			message: "Which ponies to exclude?",
-			requestedSchema: {
-				type: "object",
-				properties: {
-					excludedPonies: {
-						type: "string",
-						title: "Excluded Ponies",
-						description:
-							"List the names of ponies to exclude, separated by commas.",
-					},
-				},
-				required: ["excludedPonies"],
-			},
-		});
+		let pool = ponies;
 
-		if (result.action === "accept" && result.content) {
-			const excluded = new Set(
-				(result.content.excludedPonies as string)
-					.split(",")
-					.map((s) => s.trim().toLowerCase())
-					.filter(Boolean),
-			);
-			console.error("[pony-sdk-streamable] excluding ponies:", [...excluded]);
-			ponies = ponies.filter(
-				(pony) =>
-					!excluded.has(pony.first.toLowerCase()) &&
-					(!pony.last || !excluded.has(pony.last.toLowerCase())),
-			);
-		} else if (result.action === "decline" || result.action === "cancel") {
-			console.error(
-				`[pony-sdk-streamable] elicitation ${result.action}ed; using all ponies`,
+		// Elicitation is a CLIENT capability. If the connected client didn't
+		// advertise it, skip the prompt and just use the full pool — that way
+		// the tool still produces something sensible instead of a generic SDK
+		// error from `elicitInput`.
+		if (server.server.getClientCapabilities()?.elicitation) {
+			const result = await server.server.elicitInput({
+				message: "Which ponies to exclude?",
+				requestedSchema: {
+					type: "object",
+					properties: {
+						excludedPonies: {
+							type: "string",
+							title: "Excluded Ponies",
+							description:
+								"List the names of ponies to exclude, separated by commas.",
+						},
+					},
+					required: ["excludedPonies"],
+				},
+			});
+
+			if (result.action === "accept" && result.content) {
+				const excluded = new Set(
+					(result.content.excludedPonies as string)
+						.split(",")
+						.map((s) => s.trim().toLowerCase())
+						.filter(Boolean),
+				);
+				console.log("[pony-sdk-streamable] excluding ponies:", [...excluded]);
+				pool = pool.filter(
+					(pony) =>
+						!excluded.has(pony.first.toLowerCase()) &&
+						(!pony.last || !excluded.has(pony.last.toLowerCase())),
+				);
+			} else if (result.action === "decline" || result.action === "cancel") {
+				console.log(
+					`[pony-sdk-streamable] elicitation ${result.action}ed; using all ponies`,
+				);
+			}
+		} else {
+			console.log(
+				"[pony-sdk-streamable] client has no elicitation capability; using all ponies",
 			);
 		}
 
-		const output = buildPassword({ minLength, special }, ponies);
+		const output = buildPassword({ minLength, special }, pool);
 		return {
 			content: [{ type: "text", text: output }],
 			structuredContent: { result: output },
@@ -100,10 +113,9 @@ server.registerTool(
 		outputSchema: { result: z.array(z.string()) },
 	},
 	({ count, minLength, special }) => {
-		const ponies = loadPoniesFromFile();
 		const pwds = buildMany(count, { minLength, special }, ponies);
 		return {
-			content: [{ type: "text", text: JSON.stringify(pwds) }],
+			content: [{ type: "text", text: pwds.map((p, i) => `${i + 1}. ${p}`).join("\n") }],
 			structuredContent: { result: pwds },
 		};
 	},
@@ -152,7 +164,6 @@ server.registerResource(
 		mimeType: "text/plain; charset=utf-8",
 	},
 	(uri) => {
-		const ponies = loadPoniesFromFile();
 		const text = toOnePerLine(ponies);
 		return { contents: [{ uri: uri.href, text }] };
 	},

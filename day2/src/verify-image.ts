@@ -1,4 +1,5 @@
-import * as fs from "node:fs";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -8,6 +9,17 @@ const mcpServer = new McpServer({
 	version: "1.0.0",
 });
 
+// Map file extensions to the mime types the sampling client will accept.
+// Anything not in this list is rejected up-front rather than silently being
+// labelled as PNG.
+const SUPPORTED_IMAGE_TYPES: Record<string, string> = {
+	".png": "image/png",
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".gif": "image/gif",
+	".webp": "image/webp",
+};
+
 mcpServer.registerTool(
 	"verify-image",
 	{
@@ -16,15 +28,46 @@ mcpServer.registerTool(
 			requiredImageElements: z.string().describe(`
         A markdown list of the image elements (e.g. texts, logos, etc.) that should be present in the image.`),
 			pathToImage: z.string().describe(`
-        The full path to the **PNG image** file that should be verified.
+        The full path to a PNG/JPEG/GIF/WEBP image file that should be verified.
         Example (on Windows): "c:\\temp\\images\\game.png"
         Example (on Linux): "/home/user/images/game.png"`),
 		},
 	},
 	async ({ requiredImageElements, pathToImage }) => {
-		// Read the image file and convert it to base64
-		const image = fs.readFileSync(pathToImage);
-		const imageBase64 = image.toString("base64");
+		// ⚠️ DEMO ONLY. We trust whatever path the model passes in and read it
+		// straight from disk. In production this is a path-traversal vector:
+		// any file the server process can read is fair game. Real deployments
+		// MUST restrict reads to a known sandbox directory and reject paths
+		// that resolve outside of it.
+		const ext = path.extname(pathToImage).toLowerCase();
+		const mimeType = SUPPORTED_IMAGE_TYPES[ext];
+		if (!mimeType) {
+			return {
+				isError: true,
+				content: [
+					{
+						type: "text",
+						text: `Unsupported image extension: "${ext}". Supported: ${Object.keys(SUPPORTED_IMAGE_TYPES).join(", ")}.`,
+					},
+				],
+			};
+		}
+
+		// Sampling is a CLIENT capability — bail out early with a useful
+		// message if the client didn't advertise it during initialize.
+		if (!mcpServer.server.getClientCapabilities()?.sampling) {
+			return {
+				isError: true,
+				content: [
+					{
+						type: "text",
+						text: "This tool needs the client's `sampling` capability, but the connected client did not advertise it.",
+					},
+				],
+			};
+		}
+
+		const imageBase64 = (await readFile(pathToImage)).toString("base64");
 
 		const response = await mcpServer.server.createMessage({
 			messages: [
@@ -51,7 +94,7 @@ mcpServer.registerTool(
 					content: {
 						type: "image",
 						data: imageBase64,
-						mimeType: "image/png",
+						mimeType,
 					},
 				},
 			],
@@ -73,4 +116,4 @@ mcpServer.registerTool(
 );
 
 const transport = new StdioServerTransport();
-mcpServer.connect(transport);
+await mcpServer.connect(transport);

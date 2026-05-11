@@ -210,7 +210,9 @@ export function getScopes(): string[] {
 
 /**
  * Throws if the current request's token is missing any of the required scopes.
- * Call this at the top of a tool handler to enforce per-tool authorization.
+ * Use this when you want the SDK to convert the failure into a JSON-RPC -32603
+ * error. For tool handlers, prefer `checkScopes` so the user gets a readable
+ * tool-level message instead of "Internal error".
  */
 export function requireScopes(...required: string[]): void {
 	if (!isAuthenticated()) {
@@ -221,4 +223,35 @@ export function requireScopes(...required: string[]): void {
 	if (missing.length > 0) {
 		throw new Error(`Missing required OAuth scope(s): ${missing.join(", ")}`);
 	}
+}
+
+/**
+ * Tool-friendly variant of `requireScopes`: returns a CallToolResult-shaped
+ * error to surface as `{ isError: true, ... }`, or `null` when the caller has
+ * everything they need. Lets MCP clients display the actual reason instead of
+ * a generic "Internal error".
+ */
+export function checkScopes(
+	...required: string[]
+): { isError: true; content: { type: "text"; text: string }[] } | null {
+	if (!isAuthenticated()) {
+		return {
+			isError: true,
+			content: [{ type: "text", text: "Authentication required." }],
+		};
+	}
+	const granted = new Set(getScopes());
+	const missing = required.filter((s) => !granted.has(s));
+	if (missing.length > 0) {
+		return {
+			isError: true,
+			content: [
+				{
+					type: "text",
+					text: `Missing required OAuth scope(s): ${missing.join(", ")}`,
+				},
+			],
+		};
+	}
+	return null;
 }

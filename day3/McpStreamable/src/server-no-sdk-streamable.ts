@@ -21,18 +21,36 @@ const app = express();
 app.use(
 	cors({
 		origin: "*",
+		methods: ["GET", "POST", "DELETE", "OPTIONS"],
+		allowedHeaders: [
+			"Content-Type",
+			"Mcp-Session-Id",
+			"Mcp-Protocol-Version",
+		],
 		exposedHeaders: ["Mcp-Session-Id"],
 	}),
 );
 app.use(express.json());
 
-function handleInitialize(id: JR["id"]) {
+const SUPPORTED_PROTOCOL_VERSIONS = [
+	"2025-11-25",
+	"2025-06-18",
+	"2025-03-26",
+	"2024-11-05",
+];
+
+function handleInitialize(id: JR["id"], params: unknown) {
+	const requested = (params as { protocolVersion?: string } | undefined)
+		?.protocolVersion;
+	const protocolVersion =
+		requested && SUPPORTED_PROTOCOL_VERSIONS.includes(requested)
+			? requested
+			: SUPPORTED_PROTOCOL_VERSIONS[0];
 	const result = {
-		protocolVersion: "2025-11-25",
+		protocolVersion,
 		serverInfo: { name: "pony-no-sdk-streamable", version: "0.1.0" },
-		capabilities: {
-			tools: { listChanged: true },
-		},
+		// We don't emit list_changed notifications, so don't claim it.
+		capabilities: { tools: {} },
 	};
 	return { jsonrpc: "2.0" as const, id, result };
 }
@@ -81,29 +99,26 @@ function handleToolsCall(id: JR["id"], params: unknown) {
 	};
 }
 
-type JsonRpcError = { code: number; message: string };
-const METHOD_NOT_ALLOWED_ERROR: JsonRpcError = {
-	code: -32000,
-	message: "Method not allowed",
-};
-function getJsonRpcError(error: JsonRpcError) {
-	return { jsonrpc: "2.0", error, id: null };
-}
-
+// 405 is an HTTP-level concern, not a JSON-RPC one. Return a plain text body
+// rather than a JSON-RPC error envelope.
 export function mcpMethodNotAllowedHandler(_req: Request, res: Response) {
-	res
-		.writeHead(405)
-		.end(JSON.stringify(getJsonRpcError(METHOD_NOT_ALLOWED_ERROR)));
+	res.status(405).type("text/plain").send("Method Not Allowed");
 }
 
 app.post("/mcp", (req, res) => {
 	const msg: JR = req.body;
-	console.error(
+	console.log(
 		`[pony-no-sdk-streamable] <- ${msg.method ?? "<response>"} (id=${msg.id ?? "none"})`,
 	);
 
+	// Notifications carry no `id`. We MUST NOT respond, not even with an error.
+	if (msg.id === undefined) {
+		res.status(202).end();
+		return;
+	}
+
 	if (msg.method === "initialize") {
-		res.json(handleInitialize(msg.id));
+		res.json(handleInitialize(msg.id, msg.params));
 		return;
 	}
 
@@ -116,7 +131,7 @@ app.post("/mcp", (req, res) => {
 		} else {
 			response = {
 				jsonrpc: "2.0" as const,
-				id: msg.id ?? null,
+				id: msg.id,
 				error: { code: -32601, message: `Unsupported method: ${msg.method}` },
 			};
 		}
@@ -124,7 +139,7 @@ app.post("/mcp", (req, res) => {
 		console.error("[pony-no-sdk-streamable] internal error:", error);
 		response = {
 			jsonrpc: "2.0" as const,
-			id: msg.id ?? null,
+			id: msg.id,
 			error: { code: -32603, message: "Internal error" },
 		};
 	}

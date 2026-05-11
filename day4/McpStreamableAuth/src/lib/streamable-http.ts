@@ -27,7 +27,11 @@ export function createStreamableHTTPServer(
 	const app = express();
 
 	app.use((req, _res, next) => {
-		console.log("Request received:", req.method, req.url);
+		// Skip the noisy `/health` line that load balancers hammer every
+		// few seconds.
+		if (req.url !== "/health") {
+			console.log("Request received:", req.method, req.url);
+		}
 		next();
 	});
 
@@ -138,9 +142,11 @@ export function createStreamableHTTPServer(
 			} else if (!sessionId && isInitializeRequest(req.body)) {
 				transport = new StreamableHTTPServerTransport({
 					sessionIdGenerator: () => randomUUID(),
+					// `StreamableHTTPServerTransport` writes the `mcp-session-id`
+					// response header itself; we only need to remember the
+					// transport so subsequent requests can find it.
 					onsessioninitialized: (sid) => {
 						transports[sid] = transport;
-						res.setHeader("mcp-session-id", sid);
 					},
 				});
 

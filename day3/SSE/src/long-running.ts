@@ -44,7 +44,12 @@ router.post("/streaming", async (_, response) => {
 	});
 
 	try {
-		response.writeHead(200, { "Content-Type": "text/plain" });
+		// `no-cache` so intermediaries (proxies, CDNs) flush each chunk
+		// instead of buffering the full response.
+		response.writeHead(200, {
+			"Content-Type": "text/plain",
+			"Cache-Control": "no-cache",
+		});
 
 		for (let i = 0; i < 10; i++) {
 			if (aborted) break;

@@ -18,6 +18,14 @@ export function createStreamableHTTPServer(
 	app.use(
 		cors({
 			origin: "*",
+			methods: ["GET", "POST", "DELETE", "OPTIONS"],
+			// Browsers must be allowed to SEND these headers cross-origin
+			// (preflight) and to READ Mcp-Session-Id off responses.
+			allowedHeaders: [
+				"Content-Type",
+				"Mcp-Session-Id",
+				"Mcp-Protocol-Version",
+			],
 			exposedHeaders: ["Mcp-Session-Id"],
 		}),
 	);
@@ -36,9 +44,11 @@ export function createStreamableHTTPServer(
 			} else if (!sessionId && isInitializeRequest(req.body)) {
 				transport = new StreamableHTTPServerTransport({
 					sessionIdGenerator: () => randomUUID(),
+					// `StreamableHTTPServerTransport` writes the `mcp-session-id`
+					// response header itself; we only need to remember the
+					// transport so subsequent requests can find it.
 					onsessioninitialized: (sid) => {
 						transports[sid] = transport;
-						res.setHeader("mcp-session-id", sid);
 					},
 				});
 

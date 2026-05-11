@@ -54,6 +54,12 @@ export const scalekit = new Scalekit(
 	SCALEKIT_CONFIG.clientSecret,
 );
 
+// Log the resolved resource id at startup. Token validation uses this as the
+// expected `aud` claim, so a misconfigured value here means every request
+// 401s with no obvious reason.
+console.log(`[scalekit] resourceId = ${SCALEKIT_CONFIG.resourceId}`);
+console.log(`[scalekit] authServer = ${SCALEKIT_CONFIG.authServer}`);
+
 /**
  * WWW-Authenticate header for unauthorized responses (HTTP 401)
  *

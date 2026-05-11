@@ -22,10 +22,28 @@ server.registerTool(
 		},
 	},
 	async ({ count, minLength, special }) => {
+		// Sampling is a CLIENT capability. If the connected client didn't
+		// advertise it during initialize, `createMessage` will throw a generic
+		// SDK error — surface a useful tool-level error instead.
+		if (!server.server.getClientCapabilities()?.sampling) {
+			return {
+				isError: true,
+				content: [
+					{
+						type: "text",
+						text: "This tool needs the client's `sampling` capability, but the connected client did not advertise it.",
+					},
+				],
+				structuredContent: { result: [], usedNames: [] },
+			};
+		}
+
 		const sampleSize = Math.max(count * 3, 10);
 		console.error(
 			`[pony-sampling] requesting ${sampleSize} names via sampling`,
 		);
+		// `server.server.createMessage` is the supported escape hatch — the
+		// `McpServer` convenience class doesn't expose sampling directly.
 		const sampling = await server.server.createMessage({
 			systemPrompt:
 				"You are a data generator. Return STRICT JSON only. No prose, no markdown.",

@@ -2,9 +2,9 @@ import { completable } from "@modelcontextprotocol/sdk/server/completable.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+	checkScopes,
 	getTokenClaims,
 	isAuthenticated,
-	requireScopes,
 } from "./lib/auth-context.js";
 import {
 	buildMany,
@@ -16,6 +16,9 @@ import { loadPoniesFromFile, toOnePerLine } from "./lib/ponies.js";
 import { createStreamableHTTPServer } from "./lib/streamable-http.js";
 
 const server = new McpServer({ name: "pony-sdk-streamable", version: "0.1.0" });
+
+// Read the pony list once at startup; the file is static.
+const ponies = loadPoniesFromFile();
 
 /** Tool 1: single password */
 server.registerTool(
@@ -30,7 +33,6 @@ server.registerTool(
 		outputSchema: { result: z.string() },
 	},
 	({ minLength, special }) => {
-		const ponies = loadPoniesFromFile();
 		const output = buildPassword({ minLength, special }, ponies);
 		return {
 			content: [{ type: "text", text: output }],
@@ -52,43 +54,52 @@ server.registerTool(
 		outputSchema: { result: z.string() },
 	},
 	async ({ minLength, special }) => {
-		let ponies = loadPoniesFromFile();
-		const result = await server.server.elicitInput({
-			message: "Which ponies to exclude?",
-			requestedSchema: {
-				type: "object",
-				properties: {
-					excludedPonies: {
-						type: "string",
-						title: "Excluded Ponies",
-						description:
-							"List the names of ponies to exclude, separated by commas.",
-					},
-				},
-				required: ["excludedPonies"],
-			},
-		});
+		let pool = ponies;
 
-		if (result.action === "accept" && result.content) {
-			const excluded = new Set(
-				(result.content.excludedPonies as string)
-					.split(",")
-					.map((s) => s.trim().toLowerCase())
-					.filter(Boolean),
-			);
-			console.error("[pony-sdk-streamable] excluding ponies:", [...excluded]);
-			ponies = ponies.filter(
-				(pony) =>
-					!excluded.has(pony.first.toLowerCase()) &&
-					(!pony.last || !excluded.has(pony.last.toLowerCase())),
-			);
-		} else if (result.action === "decline" || result.action === "cancel") {
-			console.error(
-				`[pony-sdk-streamable] elicitation ${result.action}ed; using all ponies`,
+		// Elicitation is a CLIENT capability; skip the prompt gracefully if
+		// the connected client doesn't support it.
+		if (server.server.getClientCapabilities()?.elicitation) {
+			const result = await server.server.elicitInput({
+				message: "Which ponies to exclude?",
+				requestedSchema: {
+					type: "object",
+					properties: {
+						excludedPonies: {
+							type: "string",
+							title: "Excluded Ponies",
+							description:
+								"List the names of ponies to exclude, separated by commas.",
+						},
+					},
+					required: ["excludedPonies"],
+				},
+			});
+
+			if (result.action === "accept" && result.content) {
+				const excluded = new Set(
+					(result.content.excludedPonies as string)
+						.split(",")
+						.map((s) => s.trim().toLowerCase())
+						.filter(Boolean),
+				);
+				console.log("[pony-sdk-streamable] excluding ponies:", [...excluded]);
+				pool = pool.filter(
+					(pony) =>
+						!excluded.has(pony.first.toLowerCase()) &&
+						(!pony.last || !excluded.has(pony.last.toLowerCase())),
+				);
+			} else if (result.action === "decline" || result.action === "cancel") {
+				console.log(
+					`[pony-sdk-streamable] elicitation ${result.action}ed; using all ponies`,
+				);
+			}
+		} else {
+			console.log(
+				"[pony-sdk-streamable] client has no elicitation capability; using all ponies",
 			);
 		}
 
-		const output = buildPassword({ minLength, special }, ponies);
+		const output = buildPassword({ minLength, special }, pool);
 		return {
 			content: [{ type: "text", text: output }],
 			structuredContent: { result: output },
@@ -110,10 +121,9 @@ server.registerTool(
 		outputSchema: { result: z.array(z.string()) },
 	},
 	({ count, minLength, special }) => {
-		const ponies = loadPoniesFromFile();
 		const pwds = buildMany(count, { minLength, special }, ponies);
 		return {
-			content: [{ type: "text", text: JSON.stringify(pwds) }],
+			content: [{ type: "text", text: pwds.map((p, i) => `${i + 1}. ${p}`).join("\n") }],
 			structuredContent: { result: pwds },
 		};
 	},
@@ -162,7 +172,6 @@ server.registerResource(
 		mimeType: "text/plain; charset=utf-8",
 	},
 	(uri) => {
-		const ponies = loadPoniesFromFile();
 		const text = toOnePerLine(ponies);
 		return { contents: [{ uri: uri.href, text }] };
 	},
@@ -206,21 +215,31 @@ server.registerTool(
 		includeUppercase,
 		customPonies,
 	}) => {
-		requireScopes("ponypwd:generate");
+		// `checkScopes` returns a tool-level error the client can render
+		// ("Missing required OAuth scope(s): ponypwd:generate") instead of
+		// the SDK turning a thrown Error into a generic -32603 "Internal".
+		const scopeError = checkScopes("ponypwd:generate");
+		if (scopeError) return scopeError;
 
-		let ponies = loadPoniesFromFile();
+		let pool = ponies;
 		if (customPonies && customPonies.length > 0) {
-			ponies = filterPonies(ponies, customPonies);
-			if (ponies.length === 0) {
-				throw new Error(
-					"No matching ponies found for the provided custom list.",
-				);
+			pool = filterPonies(pool, customPonies);
+			if (pool.length === 0) {
+				return {
+					isError: true,
+					content: [
+						{
+							type: "text",
+							text: "No matching ponies found for the provided custom list.",
+						},
+					],
+				};
 			}
 		}
 
 		const result = buildPasswordAdvanced(
 			{ length, includeNumbers, includeSymbols, includeUppercase },
-			ponies,
+			pool,
 		);
 
 		return {

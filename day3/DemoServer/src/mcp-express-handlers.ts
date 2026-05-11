@@ -30,10 +30,7 @@ function getJsonRpcError(error: JsonRpcError) {
 
 export async function mcpPostHandler(req: Request, res: Response) {
 	// For details about session handling, see https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#session-management
-	let sessionId: string | undefined;
-	if (req.headers?.["mcp-session-id"]) {
-		sessionId = req.headers["mcp-session-id"] as string;
-	}
+	const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
 	if (sessionId) {
 		console.log(`Received MCP request for session: ${sessionId}`);
@@ -105,8 +102,10 @@ export async function mcpGetHandler(req: Request, res: Response) {
 	await transport.handleRequest(req, res);
 }
 
-// DELETE /mcp terminates a session (spec 2025-06-18). Delegates to the
-// transport, which triggers the onclose handler registered above.
+// DELETE /mcp terminates a session (spec 2025-06-18). We delegate to the
+// transport; it will end the SSE stream and fire the `onclose` handler
+// registered in `mcpPostHandler`, which is what actually removes the entry
+// from `transports`.
 export async function mcpDeleteHandler(req: Request, res: Response) {
 	const sessionId = req.headers["mcp-session-id"] as string | undefined;
 	const transport = sessionId ? transports[sessionId] : undefined;
