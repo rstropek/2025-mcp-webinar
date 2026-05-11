@@ -20,7 +20,7 @@ const PORT = Number(process.env.PORT ?? 3001);
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "4mb" }));
+app.use(express.json());
 
 // Lightweight health check so cloudflared / docker-compose / kubernetes can
 // verify the process is up without speaking MCP.
