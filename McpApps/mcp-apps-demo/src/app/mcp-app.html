@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Release Cockpit</title>
+    <!--
+      Two-screen flow:
+        #view-plan     - shown initially (plan + risks + approve)
+        #view-monitor  - shown after the user approves (live ops view)
+      Switching happens in main.ts via the cockpit state machine; the model
+      does NOT need to be involved for this transition.
+    -->
+  </head>
+  <body data-view="plan">
+    <div id="root">
+      <header class="topbar">
+        <div class="title-block">
+          <h1 id="cockpit-title">Release Cockpit</h1>
+          <p id="cockpit-subtitle">Loading rollout plan…</p>
+        </div>
+        <div class="topbar-actions">
+          <span id="phase-badge" class="pill" hidden></span>
+          <button id="display-mode-btn" class="btn ghost" type="button">
+            ⤢ Fullscreen
+          </button>
+        </div>
+      </header>
+
+      <!-- ============== SCREEN 1: PLAN ============== -->
+      <main class="layout" id="view-plan">
+        <section class="col col-main">
+          <article class="card">
+            <div class="card-head">
+              <h2>Rollout phases</h2>
+            </div>
+            <div id="timeline-list"></div>
+          </article>
+
+          <article class="card primary-cta">
+            <div class="cta-text">
+              <strong>Ready to ship?</strong>
+              <span id="cta-summary">Review risks, then approve to start the rollout.</span>
+            </div>
+            <div class="row">
+              <input id="approver" placeholder="Your name" />
+              <button id="approve-btn" class="btn primary big" type="button">
+                Approve &amp; release
+              </button>
+            </div>
+            <pre id="approval-output" class="output"></pre>
+          </article>
+        </section>
+
+        <section class="col col-side">
+          <article class="card">
+            <div class="card-head">
+              <h2>Key risks</h2>
+            </div>
+            <ul id="risks-list"></ul>
+          </article>
+        </section>
+      </main>
+
+      <!-- ============== SCREEN 2: MONITOR (post-approval) ============== -->
+      <main class="layout" id="view-monitor" hidden>
+        <section class="col col-main">
+          <article class="card success-banner">
+            <strong id="approved-headline">Released ✓</strong>
+            <span id="approved-detail">Monitoring the rollout for the next 60 minutes.</span>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2>Live metrics</h2>
+            </div>
+            <div class="metrics-grid">
+              <div class="metric">
+                <span class="metric-label">error rate</span>
+                <span id="m-error" class="metric-value">–</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">p95 latency</span>
+                <span id="m-latency" class="metric-value">–</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">checkout conv.</span>
+                <span id="m-conv" class="metric-value">–</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">support tickets</span>
+                <span id="m-tickets" class="metric-value">–</span>
+              </div>
+            </div>
+            <svg id="metrics-spark" viewBox="0 0 320 60" preserveAspectRatio="none"></svg>
+          </article>
+
+          <article class="card">
+            <button id="ask-summary-btn" class="btn primary" type="button">
+              Hand back to AI · request executive summary
+            </button>
+          </article>
+        </section>
+
+        <section class="col col-side">
+          <article class="card">
+            <div class="card-head">
+              <h2>Recent activity</h2>
+            </div>
+            <div class="row">
+              <input id="log-filter" placeholder="filter (e.g. payment timeout)" />
+              <select id="log-level">
+                <option value="">all</option>
+                <option value="error">errors</option>
+                <option value="warn">warnings</option>
+              </select>
+            </div>
+            <ul id="logs-list" class="logs"></ul>
+          </article>
+        </section>
+      </main>
+
+      <footer class="bottombar">
+        <span id="connection-pill" class="pill">connecting…</span>
+        <span id="last-action" class="last-action">ready</span>
+      </footer>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
