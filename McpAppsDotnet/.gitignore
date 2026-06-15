@@ -1,0 +1,14 @@
+# .NET build output
+bin/
+obj/
+
+# Node / Vite
+node_modules/
+ui/dist/
+
+# OS
+.DS_Store
+
+# AI
+.agents
+.claude

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Step 2 — Host context</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --color-text-primary: light-dark(#1f2937, #f3f4f6);
+        --color-background-primary: light-dark(#ffffff, #18181b);
+        --color-background-info: light-dark(#eff6ff, #1e293b);
+        --color-accent: #2563eb;
+        --font-sans: system-ui, sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      html, body { margin: 0; }
+      body {
+        font-family: var(--font-sans);
+        color: var(--color-text-primary);
+        background: var(--color-background-primary);
+      }
+      .panel {
+        padding: 1rem;
+        background: var(--color-background-info);
+        border-radius: 8px;
+      }
+      dl { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: 0; }
+      dt { font-weight: 600; }
+      dd { margin: 0; font-family: var(--font-mono); }
+      .badge {
+        display: inline-block;
+        padding: .15rem .5rem;
+        border-radius: 999px;
+        background: var(--color-accent);
+        color: white;
+        font-size: .75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="main">
+      <h1>Host context</h1>
+      <p>This panel re-renders every time the host context changes (theme,
+      display mode, container size, safe-area insets).</p>
+      <div class="panel">
+        <dl>
+          <dt>Theme</dt><dd><span id="theme" class="badge">–</span></dd>
+          <dt>Display mode</dt><dd id="display-mode">–</dd>
+          <dt>Locale</dt><dd id="locale">–</dd>
+          <dt>Timezone</dt><dd id="tz">–</dd>
+          <dt>Container</dt><dd id="dims">–</dd>
+          <dt>Safe-area insets</dt><dd id="safe">–</dd>
+        </dl>
+      </div>
+    </main>
+    <script type="module" src="/src/step2-host-context/view.ts"></script>
+  </body>
+</html>

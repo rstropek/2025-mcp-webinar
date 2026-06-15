@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Step 3 — Call server tool</title>
+    <style>
+      :root { color-scheme: light dark; --accent: #2563eb; }
+      body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem; }
+      blockquote {
+        margin: 0;
+        padding: 1rem 1.25rem;
+        border-left: 4px solid var(--accent);
+        background: color-mix(in srgb, var(--accent) 8%, transparent);
+        font-size: 1.1rem;
+      }
+      cite { display: block; margin-top: .5rem; opacity: .7; font-style: normal; }
+      button {
+        margin-top: 1rem;
+        padding: .5rem 1rem;
+        border: none; border-radius: 6px;
+        background: var(--accent); color: white;
+        font-weight: 600; cursor: pointer;
+      }
+      button[disabled] { opacity: .5; cursor: progress; }
+      small { display: block; margin-top: 1rem; opacity: .6; }
+    </style>
+  </head>
+  <body>
+    <h1>Random quote</h1>
+    <blockquote>
+      <span id="quote">—</span>
+      <cite id="author">—</cite>
+    </blockquote>
+    <button id="refresh">Another one</button>
+    <small>
+      The "Another one" button calls an <code>app-only</code> tool — the model
+      never sees the call, and the conversation timeline stays clean.
+    </small>
+    <script type="module" src="/src/step3-call-tool/view.ts"></script>
+  </body>
+</html>

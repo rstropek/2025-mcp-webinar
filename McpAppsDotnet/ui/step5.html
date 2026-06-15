@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Step 5 — Live polling</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { margin: 0; }
+      main { font-family: system-ui, sans-serif; padding: 1rem; max-width: 480px; }
+      h1 { margin-top: 0; }
+      .lead { opacity: .7; }
+      .card {
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+        padding: 1rem;
+        border-radius: 8px;
+        background: color-mix(in srgb, currentColor 6%, transparent);
+      }
+      .row { display: flex; justify-content: space-between; gap: 1rem; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Live host stats</h1>
+      <p class="lead">Polls an app-only tool every 2 seconds. The model never sees these calls.</p>
+      <div class="card">
+        <div class="row"><span>CPU</span><span id="cpu">—</span></div>
+        <div class="row"><span>Memory</span><span id="memory">—</span></div>
+        <div class="row"><span>Uptime</span><span id="uptime">—</span></div>
+        <div class="row"><span>Server time</span><span id="timestamp" class="mono">—</span></div>
+        <div class="row"><span>Polls observed</span><span id="ticks">0</span></div>
+      </div>
+    </main>
+    <script type="module" src="/src/step5-live-polling/view.ts"></script>
+  </body>
+</html>

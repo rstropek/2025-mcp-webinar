@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>McpAppsDotnet</RootNamespace>
+    <!-- Where the Vite single-file views live. Built by the BuildUiViews target,
+         copied into the output/publish dir by the CopyUiViews/PublishUiViews targets. -->
+    <UiDir>$(MSBuildProjectDirectory)/../ui</UiDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.4.0" />
+  </ItemGroup>
+
+  <!--
+    Build the HTML/TS/CSS views with Vite. Skip with -p:SkipUiBuild=true when
+    you've already built the UI by hand (cd ../ui && npm run build).
+  -->
+  <Target Name="BuildUiViews" BeforeTargets="Build" Condition="'$(SkipUiBuild)' != 'true'">
+    <Exec Command="npm install" WorkingDirectory="$(UiDir)" Condition="!Exists('$(UiDir)/node_modules')" />
+    <Exec Command="npm run build" WorkingDirectory="$(UiDir)" />
+  </Target>
+
+  <!--
+    Copy the six bundled stepN.html files next to the executable under `views/`,
+    for both the build output (CopyUiViews -> $(OutDir)) and `dotnet publish`
+    (PublishUiViews -> $(PublishDir)). The server reads them at startup from
+    AppContext.BaseDirectory/views (see ViewStore). The <Error> guard turns a
+    missing dist/ (e.g. -p:SkipUiBuild=true on a fresh checkout) into a loud
+    build failure instead of an app that silently has no views.
+  -->
+  <Target Name="CopyUiViews" AfterTargets="Build">
+    <ItemGroup>
+      <_UiView Include="$(UiDir)/dist/step*.html" />
+    </ItemGroup>
+    <Error Condition="'@(_UiView)' == ''"
+           Text="No UI views found in $(UiDir)/dist. Build them first: cd ../ui &amp;&amp; npm install &amp;&amp; npm run build (or build without -p:SkipUiBuild=true)." />
+    <Copy SourceFiles="@(_UiView)" DestinationFolder="$(OutDir)views" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="PublishUiViews" AfterTargets="Publish">
+    <ItemGroup>
+      <_UiView Include="$(UiDir)/dist/step*.html" />
+    </ItemGroup>
+    <Error Condition="'@(_UiView)' == ''"
+           Text="No UI views found in $(UiDir)/dist to publish. Build the UI first (cd ../ui &amp;&amp; npm run build)." />
+    <Copy SourceFiles="@(_UiView)" DestinationFolder="$(PublishDir)views" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Step 6 — Fullscreen + CSP</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { margin: 0; }
+      main { font-family: system-ui, sans-serif; padding: 1rem; }
+      header { display: flex; justify-content: space-between; align-items: baseline; }
+      header h1 { margin: 0; }
+      .lead { opacity: .7; }
+      button {
+        appearance: none;
+        border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+        border-radius: 6px;
+        padding: .45rem .8rem;
+        font: inherit;
+        cursor: pointer;
+        background: color-mix(in srgb, currentColor 8%, transparent);
+        color: inherit;
+      }
+      button[hidden] { display: none; }
+      img { max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+      .note { margin-top: 1rem; font-size: .875rem; opacity: .6; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1 id="country">Loading…</h1>
+        <button id="toggle" hidden>Go fullscreen</button>
+      </header>
+      <p class="lead">Current display mode: <code id="mode">inline</code></p>
+      <div id="flag-container"><p>No flag yet.</p></div>
+      <p class="note">
+        Image served from <code>flagcdn.com</code> — allowed by the server's
+        <code>_meta.ui.csp.resourceDomains</code>. Without that entry, the
+        host's default-deny CSP would block the load.
+      </p>
+    </main>
+    <script type="module" src="/src/step6-fullscreen-csp/view.ts"></script>
+  </body>
+</html>

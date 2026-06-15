@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Step 4 — Talk to model</title>
+    <style>
+      :root { color-scheme: light dark; --accent: #2563eb; }
+      body { margin: 0; }
+      main {
+        font-family: system-ui, sans-serif;
+        padding: 1.5rem;
+        max-width: 560px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      header { margin-bottom: 1.25rem; }
+      header h1 { margin: 0; font-size: 1.5rem; }
+      header p { margin: .35rem 0 0; opacity: .65; font-size: .9rem; }
+      .card {
+        display: flex;
+        flex-direction: column;
+        gap: .75rem;
+        padding: 1rem 1.1rem;
+        border-radius: 10px;
+        background: color-mix(in srgb, currentColor 4%, transparent);
+        border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+      }
+      .card h2 { margin: 0; font-size: .95rem; font-weight: 600; }
+      .card .hint { margin: .15rem 0 0; font-size: .8rem; opacity: .65; line-height: 1.4; }
+      .card .actions { display: flex; justify-content: flex-end; }
+      textarea, input {
+        width: 100%;
+        box-sizing: border-box;
+        font-family: inherit;
+        font-size: .9rem;
+        padding: .55rem .7rem;
+        border-radius: 6px;
+        border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+        background: Canvas;
+        color: inherit;
+        resize: vertical;
+      }
+      button {
+        appearance: none;
+        border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+        border-radius: 6px;
+        padding: .5rem .9rem;
+        font-size: .9rem;
+        font-weight: 500;
+        cursor: pointer;
+        background: color-mix(in srgb, currentColor 8%, transparent);
+        color: inherit;
+      }
+      button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+      #status {
+        margin: .25rem 0 0;
+        padding: .6rem .85rem;
+        font-size: .85rem;
+        border-radius: 6px;
+        background: color-mix(in srgb, currentColor 6%, transparent);
+        opacity: .85;
+      }
+      #status:empty { display: none; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Step 4 — Talk to model</h1>
+        <p>Three ways a View can drive the conversation: silent context, user turn, external link.</p>
+      </header>
+
+      <section class="card">
+        <div>
+          <h2>Pin to model context</h2>
+          <p class="hint">Silent — appended to the model's context on its next turn. No reply triggered.</p>
+        </div>
+        <textarea id="note" rows="2">Answer with lots of emojis!</textarea>
+        <div class="actions"><button id="pin">Pin to context</button></div>
+      </section>
+
+      <section class="card">
+        <div>
+          <h2>Send as user message</h2>
+          <p class="hint">Behaves as if the user typed it. The model replies immediately.</p>
+        </div>
+        <textarea id="message" rows="2">Summarise the conversation so far.</textarea>
+        <div class="actions"><button id="send" class="primary">Send message</button></div>
+      </section>
+
+      <section class="card">
+        <div>
+          <h2>Open external link</h2>
+          <p class="hint">The host opens the URL — the sandboxed iframe cannot navigate the top window itself.</p>
+        </div>
+        <input id="link" value="https://modelcontextprotocol.io/" />
+        <div class="actions"><button id="open">Open via host</button></div>
+      </section>
+
+      <p id="status"></p>
+    </main>
+    <script type="module" src="/src/step4-talk-to-model/view.ts"></script>
+  </body>
+</html>

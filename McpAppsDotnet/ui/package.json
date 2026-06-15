@@ -1,0 +1,22 @@
+{
+  "name": "mcp-apps-dotnet-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sandboxed HTML/TS/CSS views for the .NET MCP Apps training demo. Six steps, six single-file bundles.",
+  "scripts": {
+    "build": "node scripts/build-ui.mjs",
+    "build:watch": "node scripts/build-ui.mjs --watch",
+    "dev": "cross-env NODE_ENV=development node scripts/build-ui.mjs --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.4"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}
