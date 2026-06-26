@@ -58,9 +58,13 @@ try {
 		name: "pony_password_batch",
 		arguments: { count: 3, minLength: 20, special: false },
 	});
-	const content = result.content as TextContent[];
+	// The batch tool declares an `outputSchema`, so the array of passwords is
+	// delivered in `structuredContent`. The `content` text is just a
+	// human-readable numbered list, not JSON.
+	const { result: passwords } = result.structuredContent as {
+		result: string[];
+	};
 	console.log("Batch passwords generated:");
-	const passwords = JSON.parse(content[0].text) as string[];
 	passwords.forEach((pwd, index) => {
 		console.log(`  ${index + 1}. ${pwd}`);
 	});

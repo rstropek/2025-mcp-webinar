@@ -19,7 +19,7 @@ Install once with `npm install`, create a `.env` from the template (see below), 
 
 `src/server-sdk-streamable.ts` — same tools/prompt/resource as the day3 SDK server, plus:
 
-- `pony_password_advanced` — hybrid generator (ponies + digits + symbols + case variation). Gated by the `ponypwd:generate` OAuth scope via `requireScopes()` in the tool handler.
+- `pony_password_advanced` — hybrid generator (ponies + digits + symbols + case variation). Gated by the `ponypwd:generate` OAuth scope via `checkScopes()` in the tool handler (which returns a readable tool-level error instead of a generic JSON-RPC `-32603`).
 - `get_token_claims` — diagnostic tool that returns the caller's JWT claims; handy while debugging OAuth integration.
 
 All routes under `/mcp` go through `requiredAuthMiddleware` (Scalekit `validateToken`). `/health` and the OAuth discovery endpoints are public by design.
@@ -37,7 +37,7 @@ The Inspector will hit a 401 with a `WWW-Authenticate: Bearer … resource_metad
 
 - `src/lib/streamable-http.ts` — Express harness with CORS, session management, OAuth discovery endpoint (`/.well-known/oauth-protected-resource`), and the `requiredAuthMiddleware` hook-up.
 - `src/lib/auth-middleware.ts` — validates the `Authorization: Bearer …` header against Scalekit. Attaches `req.token` / `req.tokenClaims` for downstream use.
-- `src/lib/auth-context.ts` — `AsyncLocalStorage`-backed per-request context so tool handlers can call `isAuthenticated()`, `getTokenClaims()`, `getScopes()`, and `requireScopes(...)` without parameter drilling.
+- `src/lib/auth-context.ts` — `AsyncLocalStorage`-backed per-request context so tool handlers can call `isAuthenticated()`, `getTokenClaims()`, `getScopes()`, `checkScopes(...)`, and `requireScopes(...)` without parameter drilling.
 - `src/lib/scalekit-config.ts` — env-var loading and the `WWW-Authenticate` header builder.
 
 ## Scripts

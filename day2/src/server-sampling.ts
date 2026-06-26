@@ -95,9 +95,7 @@ server.registerTool(
 			raw = (c as { text: string }).text;
 		}
 
-		const fenced = raw
-			.trim()
-			.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/i);
+		const fenced = raw.trim().match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/i);
 		if (fenced) {
 			raw = fenced[1];
 		}

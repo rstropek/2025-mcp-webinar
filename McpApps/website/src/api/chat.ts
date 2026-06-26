@@ -2,7 +2,6 @@ import { type Request, type Response } from 'express';
 import { LLMClient, type LLMResponse } from '../lib/llm.js';
 import { loadPoniesFromFile } from '../lib/ponies.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { z } from 'zod';
 
 type ToolCall = NonNullable<LLMResponse['toolCalls']>[number];
 type ToolResultMessage = { tool_call_id: string; role: 'tool'; name: string; content: string };

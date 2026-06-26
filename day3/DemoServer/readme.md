@@ -31,6 +31,6 @@ Add logging and `thinkHard` parameter to demonstrate streaming behavior.
    * Start `npm run debug`
    * Initialize using [_requests.http_](./requests.http)
    * Run curl for GET request with [_curl.sh_](./curl.sh)
-3. Using Inspector:
+2. Using Inspector:
    * Start `npm run debug`
    * Demonstrate in inspector (with direct mode, not proxy)

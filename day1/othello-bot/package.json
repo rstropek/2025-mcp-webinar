@@ -13,12 +13,12 @@
   "description": "",
   "dependencies": {
     "@azure/identity": "^4.13.1",
-    "openai": "^6.37.0",
+    "openai": "^6.45.0",
     "othello-game": "file:../othello-game",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^25.6.2",
+    "@types/node": "^26.0.1",
     "typescript": "^6.0.3"
   }
 }

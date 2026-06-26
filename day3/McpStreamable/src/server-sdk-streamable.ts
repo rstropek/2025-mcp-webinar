@@ -115,7 +115,9 @@ server.registerTool(
 	({ count, minLength, special }) => {
 		const pwds = buildMany(count, { minLength, special }, ponies);
 		return {
-			content: [{ type: "text", text: pwds.map((p, i) => `${i + 1}. ${p}`).join("\n") }],
+			content: [
+				{ type: "text", text: pwds.map((p, i) => `${i + 1}. ${p}`).join("\n") },
+			],
 			structuredContent: { result: pwds },
 		};
 	},

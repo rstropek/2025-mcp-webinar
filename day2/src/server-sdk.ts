@@ -50,7 +50,9 @@ server.registerTool(
 		// Human-readable text fallback (one per line) for hosts that don't read
 		// structuredContent. The typed array still flows via structuredContent.
 		return {
-			content: [{ type: "text", text: pwds.map((p, i) => `${i + 1}. ${p}`).join("\n") }],
+			content: [
+				{ type: "text", text: pwds.map((p, i) => `${i + 1}. ${p}`).join("\n") },
+			],
 			structuredContent: { result: pwds },
 		};
 	},

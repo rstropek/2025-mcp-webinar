@@ -22,11 +22,7 @@ app.use(
 	cors({
 		origin: "*",
 		methods: ["GET", "POST", "DELETE", "OPTIONS"],
-		allowedHeaders: [
-			"Content-Type",
-			"Mcp-Session-Id",
-			"Mcp-Protocol-Version",
-		],
+		allowedHeaders: ["Content-Type", "Mcp-Session-Id", "Mcp-Protocol-Version"],
 		exposedHeaders: ["Mcp-Session-Id"],
 	}),
 );
