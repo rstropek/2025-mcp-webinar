@@ -1,92 +1,88 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
-import type {
-	CallToolResult,
-	ServerNotification,
-	ServerRequest,
-} from "@modelcontextprotocol/sdk/types.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
-const echoToolSchema = z.object({
-	message: z.string().describe("The message to echo back."),
-	thinkHard: z
-		.boolean()
-		.describe(
-			"If true, the tool will simulate thinking hard before responding. When in doubt, always set this to false.",
-		),
-});
-type EchoToolInput = z.infer<typeof echoToolSchema>;
+/** Number of "thinking" steps the echo tool reports when `thinkHard` is true. */
+const THINK_STEPS = 3;
 
-function sleep(ms: number) {
-	return new Promise((resolve) => setTimeout(resolve, ms));
+/** Waits `ms` milliseconds, but returns early when the request is cancelled. */
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, ms);
+    signal.addEventListener("abort", done, { once: true });
+    function done() {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", done);
+      resolve();
+    }
+  });
 }
 
-async function echoTool(
-	server: McpServer,
-	params: EchoToolInput,
-	extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
-): Promise<CallToolResult> {
-	// sendLoggingMessage streams progress back to the client while the tool
-	// is still running — this is the core benefit of Streamable HTTP over
-	// a plain request/response transport.
-	await server.sendLoggingMessage(
-		{
-			level: "debug",
-			data: "Echo tool invoked",
-		},
-		extra.sessionId,
-	);
+/**
+ * Builds a fresh server instance with the single demo tool.
+ *
+ * There is no long-lived server object anymore: the 2026-07-28 revision is
+ * stateless, so `createMcpHandler` calls this factory once per HTTP request
+ * (see `mcp-handler.ts`). Everything the server offers must therefore be
+ * registered here, not somewhere outside.
+ */
+export function buildServer(): McpServer {
+  const server = new McpServer({ name: "demo-mcp-server", version: "1.0.0" });
 
-	if (params.thinkHard) {
-		const steps = 3;
-		for (let i = 0; i < steps; i++) {
-			await sleep(1000);
-			await server.sendLoggingMessage(
-				{
-					level: "info",
-					data: `Thinking hard... (${i + 1}/${steps})`,
-				},
-				extra.sessionId,
-			);
-		}
-	}
+  server.registerTool(
+    "echo-tool",
+    {
+      title: "Echo Tool",
+      description: "A tool that echoes back the input it receives.",
+      // Schemas are Standard Schema objects — a plain `z.object({...})`.
+      inputSchema: z.object({
+        message: z.string().describe("The message to echo back."),
+        thinkHard: z
+          .boolean()
+          .describe("If true, the tool simulates thinking hard before responding. When in doubt, set this to false."),
+      }),
+      // `readOnlyHint` tells the host that calling this tool changes nothing,
+      // so it may be called without asking the user for confirmation.
+      annotations: { readOnlyHint: true },
+    },
+    async ({ message, thinkHard }, ctx) => {
+      if (thinkHard) {
+        // A client that wants progress updates puts a `progressToken` into the
+        // request's `_meta`. Without one, the server MUST stay silent — there
+        // would be nothing to correlate the notifications with.
+        const progressToken = ctx.mcpReq._meta?.progressToken;
 
-	return {
-		content: [
-			{
-				type: "text",
-				text: `Echo: ${params.message}`,
-			},
-		],
-	};
-}
+        for (let step = 1; step <= THINK_STEPS; step++) {
+          await sleep(1000, ctx.mcpReq.signal);
 
-export function registerEchoTool(server: McpServer) {
-	server.registerTool(
-		"echo-tool",
-		{
-			title: "Echo Tool",
-			description: "A tool that echoes back the input it receives.",
-			inputSchema: echoToolSchema.shape,
-			annotations: {
-				readOnlyHint: true,
-				destructiveHint: false,
-			},
-		},
-		(params, extra) => echoTool(server, params, extra),
-	);
-}
+          // The client hung up (closing the response stream is how the
+          // 2026-07-28 revision expresses cancellation). Stop working.
+          if (ctx.mcpReq.signal.aborted) {
+            break;
+          }
 
-export function getServer(): McpServer {
-	const server = new McpServer(
-		{
-			name: "demo-mcp-server",
-			version: "1.0.0",
-		},
-		{ capabilities: { logging: {} } },
-	);
+          if (progressToken !== undefined) {
+            // THIS is what makes Streamable HTTP interesting: as soon as the
+            // handler emits a message before its result, the response can no
+            // longer be a single JSON object, so the SDK upgrades it to an SSE
+            // stream. The progress events arrive while the tool is still
+            // running; the result is the last event on the stream.
+            // `progress` must strictly increase from notification to notification.
+            await ctx.mcpReq.notify({
+              method: "notifications/progress",
+              params: {
+                progressToken,
+                progress: step,
+                total: THINK_STEPS,
+                message: `Thinking hard... (${step}/${THINK_STEPS})`,
+              },
+            });
+          }
+        }
+      }
 
-	registerEchoTool(server);
+      return { content: [{ type: "text", text: `Echo: ${message}` }] };
+    },
+  );
 
-	return server;
+  return server;
 }

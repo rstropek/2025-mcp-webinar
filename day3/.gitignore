@@ -1,0 +1,6 @@
+.env
+node_modules/
+dist/
+
+# pi.dev project-local MCP overrides (written by /mcp enable|disable)
+.pi/

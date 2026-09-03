@@ -1,7 +1,3 @@
 {
-	"recommendations": [
-		"humao.rest-client",
-		"esbenp.prettier-vscode",
-		"fill-labs.dependi"
-	]
+  "recommendations": ["humao.rest-client", "biomejs.biome", "fill-labs.dependi"]
 }

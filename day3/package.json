@@ -1,0 +1,16 @@
+{
+  "name": "mcp-webinar-day3",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root workspace for the day 3 samples (SSE, DemoServer, McpStreamable). Holds the shared Biome configuration.",
+  "scripts": {
+    "check": "biome check --write .",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "ci": "biome ci ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.12"
+  }
+}

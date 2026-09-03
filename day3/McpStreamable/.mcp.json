@@ -1,0 +1,17 @@
+{
+  "settings": {
+    "directTools": true
+  },
+  "mcpServers": {
+    "pony-sdk-streamable": {
+      "url": "http://127.0.0.1:3000/mcp",
+      "protocolVersion": "auto",
+      "disabled": true
+    },
+    "pony-no-sdk-streamable": {
+      "url": "http://127.0.0.1:3002/mcp",
+      "protocolVersion": "auto",
+      "disabled": true
+    }
+  }
+}

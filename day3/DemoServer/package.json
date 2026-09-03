@@ -1,33 +1,32 @@
 {
-	"name": "demo-mcp-server",
-	"version": "1.0.0",
-	"description": "",
-	"main": "index.js",
-	"type": "module",
-	"scripts": {
-		"build": "tsc",
-		"start": "tsx src/app.ts",
-		"inspector": "npx mcp-inspector http://localhost:3000",
-		"debug": "run-p start inspector",
-		"check": "biome check . --write"
-	},
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
-	"devDependencies": {
-		"@biomejs/biome": "2.5.1",
-		"@modelcontextprotocol/inspector": "^0.22.0",
-		"@types/express": "^5.0.6",
-		"@types/node": "^26.0.1",
-		"npm-run-all": "^4.1.5",
-		"tsx": "^4.22.4",
-		"typescript": "^6.0.3"
-	},
-	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.29.0",
-		"@types/cors": "^2.8.19",
-		"cors": "^2.8.6",
-		"express": "^5.2.1",
-		"zod": "^3.25.76"
-	}
+  "name": "demo-mcp-server",
+  "version": "1.0.0",
+  "description": "Tiny MCP server over Streamable HTTP",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/app.ts",
+    "inspector": "npx mcp-inspector http://127.0.0.1:3000/mcp",
+    "debug": "run-p start inspector"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@modelcontextprotocol/inspector": "^2.5.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.4.1",
+    "npm-run-all2": "^9.0.3",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/express": "^2.0.0",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "zod": "^4.5.4"
+  }
 }

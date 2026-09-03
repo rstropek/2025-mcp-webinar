@@ -1,26 +1,24 @@
 {
-	"name": "theproblem",
-	"version": "1.0.0",
-	"main": "index.js",
-	"type": "module",
-	"scripts": {
-		"build": "tsc",
-		"start": "npm run build && node ./dist/app.js",
-		"check": "biome check . --write"
-	},
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
-	"description": "",
-	"devDependencies": {
-		"@biomejs/biome": "^2.5.1",
-		"@types/cors": "^2.8.19",
-		"@types/express": "^5.0.6",
-		"@types/node": "^26.0.1",
-		"typescript": "^6.0.3"
-	},
-	"dependencies": {
-		"cors": "^2.8.6",
-		"express": "^5.2.1"
-	}
+  "name": "theproblem",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node ./dist/app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.4.1",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
 }

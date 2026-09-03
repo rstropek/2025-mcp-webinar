@@ -1,35 +1,35 @@
 {
-	"name": "mcp_mylittlepony",
-	"version": "1.0.0",
-	"main": "index.ts",
-	"scripts": {
-		"build": "tsc && cp -r src/data dist/",
-		"start:sdk-streamable": "tsx ./src/server-sdk-streamable.ts",
-		"start:no-sdk-streamable": "tsx ./src/server-no-sdk-streamable.ts",
-		"inspect:sdk": "npx @modelcontextprotocol/inspector http://localhost:3000/mcp",
-		"inspect:no-sdk": "npx @modelcontextprotocol/inspector http://localhost:3002/mcp",
-		"client:streamable": "tsx ./src/client-streamable.ts",
-		"check": "biome check . --write"
-	},
-	"keywords": [],
-	"author": "",
-	"type": "module",
-	"license": "ISC",
-	"description": "",
-	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.29.0",
-		"cors": "^2.8.6",
-		"express": "^5.2.1",
-		"zod": "^4.4.3",
-		"zod-to-json-schema": "^3.25.2"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "2.5.1",
-		"@modelcontextprotocol/inspector": "^0.22.0",
-		"@types/cors": "^2.8.19",
-		"@types/express": "^5.0.6",
-		"@types/node": "^26.0.1",
-		"tsx": "^4.22.4",
-		"typescript": "^6.0.3"
-	}
+  "name": "mcp_mylittlepony_streamable",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc && cp -r src/data dist/",
+    "start:sdk": "tsx ./src/server-sdk-streamable.ts",
+    "start:no-sdk": "tsx ./src/server-no-sdk-streamable.ts",
+    "inspect:sdk": "npx @modelcontextprotocol/inspector http://127.0.0.1:3000/mcp",
+    "inspect:no-sdk": "npx @modelcontextprotocol/inspector http://127.0.0.1:3002/mcp",
+    "start:client": "npm run build && node ./dist/client-streamable.js",
+    "start:chat": "npm run build && node --env-file=../.env dist/chat-client.js"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "module",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/express": "^2.0.0",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "express": "^5.2.1",
+    "openai": "^7.9.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/inspector": "^2.5.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.4.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
 }
