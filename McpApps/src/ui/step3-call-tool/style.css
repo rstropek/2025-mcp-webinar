@@ -1,0 +1,62 @@
+:root {
+  color-scheme: light dark;
+  --accent: light-dark(#2563eb, #60a5fa);
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  color: light-dark(#1f2937, #f3f4f6);
+  background: light-dark(#ffffff, #18181b);
+  padding: 1rem;
+}
+
+blockquote {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-left: 4px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-size: 1.1rem;
+}
+
+cite {
+  display: block;
+  margin-top: 0.5rem;
+  opacity: 0.7;
+  font-style: normal;
+}
+
+button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button[disabled] {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+small {
+  display: block;
+  margin-top: 1rem;
+  opacity: 0.6;
+}
+
+#error {
+  margin-top: 1rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, red 12%, transparent);
+  color: light-dark(#7f1d1d, #fca5a5);
+  font-size: 0.85rem;
+}

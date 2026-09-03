@@ -1,0 +1,55 @@
+:root {
+  color-scheme: light dark;
+  --color-text-primary: light-dark(#1f2937, #f3f4f6);
+  --color-background-primary: light-dark(#ffffff, #18181b);
+  --color-background-info: light-dark(#eff6ff, #1e293b);
+  --color-accent: light-dark(#2563eb, #60a5fa);
+  --font-sans: system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background: var(--color-background-primary);
+}
+
+main {
+  padding: 1.25rem 1.5rem;
+}
+
+.panel {
+  padding: 1rem;
+  background: var(--color-background-info);
+  border-radius: 8px;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+
+dt {
+  font-weight: 600;
+}
+
+dd {
+  margin: 0;
+  font-family: var(--font-mono);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: white;
+  font-size: 0.75rem;
+}

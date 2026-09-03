@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Step 3 — Call server tool</title>
+  </head>
+  <body>
+    <h1>Random quote</h1>
+    <blockquote>
+      <span id="quote">—</span>
+      <cite id="author">—</cite>
+    </blockquote>
+    <button id="refresh" type="button">Another one</button>
+    <p id="error" hidden></p>
+    <small>
+      The "Another one" button calls an <code>app-only</code> tool — the model never sees the call, and the
+      conversation timeline stays clean.
+    </small>
+    <script type="module" src="./view.ts"></script>
+  </body>
+</html>

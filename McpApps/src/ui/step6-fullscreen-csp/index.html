@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Step 6 — Fullscreen + CSP</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1 id="country">Loading…</h1>
+        <button id="toggle" type="button" hidden>Go fullscreen</button>
+      </header>
+      <p class="lead">Current display mode: <code id="mode">inline</code></p>
+      <div id="flag-container"><p>No flag yet.</p></div>
+      <p class="note">
+        Image served from <code>flagcdn.com</code> — allowed by the server's
+        <code>_meta.ui.csp.resourceDomains</code>. Without that entry, the host's default-deny CSP would block the
+        load.
+      </p>
+    </main>
+    <script type="module" src="./view.ts"></script>
+  </body>
+</html>

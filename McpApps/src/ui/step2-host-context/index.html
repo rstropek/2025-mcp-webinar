@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Step 2 — Host context</title>
+  </head>
+  <body>
+    <main id="main">
+      <h1>Host context</h1>
+      <p>
+        This panel re-renders every time the host context changes (theme, display mode, container size, safe-area
+        insets).
+      </p>
+      <div class="panel">
+        <dl>
+          <dt>Theme</dt>
+          <dd><span id="theme" class="badge">–</span></dd>
+          <dt>Display mode</dt>
+          <dd id="display-mode">–</dd>
+          <dt>Locale</dt>
+          <dd id="locale">–</dd>
+          <dt>Timezone</dt>
+          <dd id="tz">–</dd>
+          <dt>Platform</dt>
+          <dd id="platform">–</dd>
+          <dt>Container</dt>
+          <dd id="dims">–</dd>
+          <dt>Safe-area insets</dt>
+          <dd id="safe">–</dd>
+        </dl>
+      </div>
+    </main>
+    <script type="module" src="./view.ts"></script>
+  </body>
+</html>

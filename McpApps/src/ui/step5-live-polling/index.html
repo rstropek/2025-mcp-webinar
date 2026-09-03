@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Step 5 — Live polling</title>
+  </head>
+  <body>
+    <main>
+      <h1>Live host stats</h1>
+      <p class="lead">Polls an app-only tool every 2 seconds. The model never sees these calls.</p>
+      <div class="card">
+        <div class="row"><span>CPU</span><span id="cpu">—</span></div>
+        <div class="row"><span>Memory</span><span id="memory">—</span></div>
+        <div class="row"><span>Uptime</span><span id="uptime">—</span></div>
+        <div class="row"><span>Server time</span><span id="timestamp" class="mono">—</span></div>
+        <div class="row"><span>Polls observed</span><span id="ticks">0</span></div>
+      </div>
+      <p id="error" hidden></p>
+    </main>
+    <script type="module" src="./view.ts"></script>
+  </body>
+</html>

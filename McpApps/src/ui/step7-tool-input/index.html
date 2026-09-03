@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Step 7 — Tool input</title>
+  </head>
+  <body>
+    <main>
+      <h1>Step 7 — Tool input</h1>
+      <p class="lead">
+        A tool call reaches the View in up to three stages: streamed partial arguments, the complete arguments, then
+        the result. Not every host sends all three.
+      </p>
+
+      <section class="panel">
+        <h2>1. Partial input</h2>
+        <p class="hint">
+          <code>ontoolinputpartial</code> — waiting — only hosts that stream tool arguments (e.g. Claude) send this.
+        </p>
+        <pre id="partial-input">—</pre>
+      </section>
+
+      <section class="panel">
+        <h2>2. Input</h2>
+        <p class="hint"><code>ontoolinput</code> — the complete arguments the model sent.</p>
+        <pre id="input">—</pre>
+      </section>
+
+      <section class="panel">
+        <h2>3. Result</h2>
+        <p class="hint"><code>ontoolresult</code> — the tool's structuredContent.</p>
+        <div id="result">
+          <p>Waiting for the tool result…</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Cooking notes</h2>
+        <p class="hint">
+          <code>app.readServerResource(...)</code> fetches a plain (non-UI) resource on demand — it isn't pushed
+          automatically.
+        </p>
+        <button id="notes-btn" type="button">Show cooking notes</button>
+        <pre id="notes" hidden></pre>
+      </section>
+
+      <p id="error" hidden></p>
+    </main>
+    <script type="module" src="./view.ts"></script>
+  </body>
+</html>

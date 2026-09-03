@@ -1,0 +1,36 @@
+:root {
+  color-scheme: light dark;
+  --accent: light-dark(#2563eb, #60a5fa);
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  color: light-dark(#1f2937, #f3f4f6);
+  background: light-dark(#ffffff, #18181b);
+}
+
+main {
+  padding: 1.25rem 1.5rem;
+  max-width: 32rem;
+}
+
+code {
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+#error {
+  margin-top: 1rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, red 12%, transparent);
+  color: light-dark(#7f1d1d, #fca5a5);
+  font-size: 0.85rem;
+}

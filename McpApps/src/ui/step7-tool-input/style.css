@@ -1,0 +1,112 @@
+:root {
+  color-scheme: light dark;
+  --accent: light-dark(#2563eb, #60a5fa);
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  color: light-dark(#1f2937, #f3f4f6);
+  background: light-dark(#ffffff, #18181b);
+}
+
+main {
+  padding: 1.25rem 1.5rem;
+  max-width: 40rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+}
+
+.lead {
+  margin: 0;
+  opacity: 0.7;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8rem;
+  opacity: 0.65;
+  line-height: 1.4;
+}
+
+.hint code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+pre {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+
+button {
+  appearance: none;
+  align-self: flex-start;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#error {
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, red 12%, transparent);
+  color: light-dark(#7f1d1d, #fca5a5);
+  font-size: 0.85rem;
+}

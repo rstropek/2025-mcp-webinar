@@ -1,0 +1,44 @@
+{
+  "name": "mcp-apps-training-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Step-by-step MCP Apps training demo: one TypeScript MCP server, seven interactive views",
+  "type": "module",
+  "scripts": {
+    "build:ui": "tsx scripts/build-ui.ts",
+    "watch:ui": "tsx scripts/build-ui.ts --watch",
+    "serve": "tsx src/server/app.ts",
+    "start": "run-s build:ui serve",
+    "dev": "run-p watch:ui \"tsx watch src/server/app.ts\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.ui.json",
+    "inspector": "mcp-inspector http://127.0.0.1:3001/mcp",
+    "inspect:mcpjam": "npx @mcpjam/inspector@latest",
+    "app-info": "mcp-inspector --cli --transport http --server-url http://127.0.0.1:3001/mcp --method tools/call --tool-name step1-hello --app-info",
+    "check": "biome check --write .",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "ci": "biome ci ."
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.12",
+    "@modelcontextprotocol/inspector": "^2.5.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.4.1",
+    "npm-run-all2": "^9.0.3",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}
