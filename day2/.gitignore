@@ -141,3 +141,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# pi.dev project-local MCP overrides (written by /mcp enable|disable)
+.pi/

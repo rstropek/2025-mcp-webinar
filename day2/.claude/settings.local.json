@@ -1,13 +1,13 @@
 {
-	"permissions": {
-		"allow": [
-			"Read(//Users/rstropek/github/2025-mcp-webinar/day3/**)",
-			"Read(//Users/rstropek/github/2025-mcp-webinar/**)",
-			"Bash(npm install *)",
-			"Bash(npx @biomejs/biome init)",
-			"Bash(npm run *)",
-			"Bash(npx biome *)",
-			"WebFetch(domain:code.visualstudio.com)"
-		]
-	}
+  "permissions": {
+    "allow": [
+      "Read(//Users/rstropek/github/2025-mcp-webinar/day3/**)",
+      "Read(//Users/rstropek/github/2025-mcp-webinar/**)",
+      "Bash(npm install *)",
+      "Bash(npx @biomejs/biome init)",
+      "Bash(npm run *)",
+      "Bash(npx biome *)",
+      "WebFetch(domain:code.visualstudio.com)"
+    ]
+  }
 }

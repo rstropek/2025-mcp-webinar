@@ -20,12 +20,7 @@ export type GenOpts = { minLength: number; special: boolean };
  * @param s - The input string to transform
  * @returns The string with special character substitutions applied
  */
-const substitutions = (s: string) =>
-	s
-		.replace(/[oO]/g, "0")
-		.replace(/[iI]/g, "!")
-		.replace(/[eE]/g, "€")
-		.replace(/[sS]/g, "$");
+const substitutions = (s: string) => s.replace(/[oO]/g, "0").replace(/[iI]/g, "!").replace(/[eE]/g, "€").replace(/[sS]/g, "$");
 
 /**
  * Generates a random integer between 0 (inclusive) and n (exclusive).
@@ -58,25 +53,25 @@ const MODES: Array<"full" | "first" | "last"> = ["full", "first", "last"];
  * @returns A generated password string
  */
 export function buildPassword(opts: GenOpts, ponies: Pony[]): string {
-	const { minLength, special } = opts;
-	let out = "";
+  const { minLength, special } = opts;
+  let out = "";
 
-	// Keep adding pony name fragments until we reach the minimum length
-	while (out.length < minLength && ponies.length > 0) {
-		// Randomly select a pony from the array
-		const pony = choice(ponies);
-		// Randomly select a rendering mode (full, first, or last name)
-		const mode = choice(MODES);
-		// Render the pony name fragment according to the selected mode
-		const frag = renderFragment(pony, mode);
-		// Skip empty fragments
-		if (!frag) continue;
-		// Append the fragment to the password
-		out += frag;
-	}
+  // Keep adding pony name fragments until we reach the minimum length
+  while (out.length < minLength && ponies.length > 0) {
+    // Randomly select a pony from the array
+    const pony = choice(ponies);
+    // Randomly select a rendering mode (full, first, or last name)
+    const mode = choice(MODES);
+    // Render the pony name fragment according to the selected mode
+    const frag = renderFragment(pony, mode);
+    // Skip empty fragments
+    if (!frag) continue;
+    // Append the fragment to the password
+    out += frag;
+  }
 
-	// Apply special character substitutions if requested
-	return special ? substitutions(out) : out;
+  // Apply special character substitutions if requested
+  return special ? substitutions(out) : out;
 }
 
 /**
@@ -90,11 +85,7 @@ export function buildPassword(opts: GenOpts, ponies: Pony[]): string {
  * @param ponies - Array of Pony objects to use for password generation
  * @returns An array of generated password strings
  */
-export function buildMany(
-	count: number,
-	opts: GenOpts,
-	ponies: Pony[],
-): string[] {
-	// Create an array of the specified length and generate a password for each element
-	return Array.from({ length: count }, () => buildPassword(opts, ponies));
+export function buildMany(count: number, opts: GenOpts, ponies: Pony[]): string[] {
+  // Create an array of the specified length and generate a password for each element
+  return Array.from({ length: count }, () => buildPassword(opts, ponies));
 }

@@ -1,0 +1,19 @@
+{
+  "settings": {
+    "directTools": true
+  },
+  "mcpServers": {
+    "pony-no-sdk": {
+      "command": "node",
+      "args": ["dist/server-no-sdk.js"],
+      "protocolVersion": "auto",
+      "disabled": true
+    },
+    "pony-sdk": {
+      "command": "node",
+      "args": ["dist/server-sdk.js"],
+      "protocolVersion": "auto",
+      "disabled": true
+    }
+  }
+}

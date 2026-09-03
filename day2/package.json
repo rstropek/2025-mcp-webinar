@@ -1,35 +1,39 @@
 {
-	"name": "mcp_mylittlepony",
-	"version": "1.0.0",
-	"main": "index.ts",
-	"scripts": {
-		"build": "tsc && cp -r src/data dist/",
-		"start:testpage": "tsx ./src/testpage.ts",
-		"start:no-sdk": "npx @modelcontextprotocol/inspector tsx ./src/server-no-sdk.ts",
-		"start:sdk": "npx @modelcontextprotocol/inspector tsx ./src/server-sdk.ts",
-		"start:sampling": "npx @modelcontextprotocol/inspector tsx ./src/server-sampling.ts",
-		"start:verify-image": "npx @modelcontextprotocol/inspector tsx ./src/verify-image.ts",
-		"start:client": "npm run build && node ./dist/client.js",
-		"start:mastra-client": "tsx ./src/mastra-client.ts",
-		"check": "biome check . --write"
-	},
-	"keywords": [],
-	"author": "",
-	"type": "module",
-	"license": "ISC",
-	"description": "",
-	"dependencies": {
-		"@mastra/core": "^1.46.0",
-		"@mastra/mcp": "^1.12.0",
-		"@modelcontextprotocol/sdk": "^1.29.0",
-		"zod": "^4.4.3"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "^2.5.1",
-		"@mcpjam/inspector": "2.19.0",
-		"@modelcontextprotocol/inspector": "^0.22.0",
-		"@types/node": "^26.0.1",
-		"tsx": "^4.22.4",
-		"typescript": "^6.0.3"
-	}
+  "name": "mcp_mylittlepony",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc && cp -r src/data dist/",
+    "start:no-sdk": "npx @modelcontextprotocol/inspector tsx ./src/server-no-sdk.ts",
+    "start:sdk": "npx @modelcontextprotocol/inspector tsx ./src/server-sdk.ts",
+    "start:client": "npm run build && node ./dist/client.js",
+    "start:chat": "npm run build && node --env-file=.env dist/chat-client.js",
+    "start:mastra-client": "npm run build && node --env-file=.env dist/mastra-client.js",
+    "check": "biome check --write .",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "ci": "biome ci ."
+  },
+  "keywords": [],
+  "author": "",
+  "type": "module",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@mastra/core": "^1.64.0",
+    "@mastra/mcp": "^1.17.3",
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "openai": "^7.9.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.11",
+    "@mcpjam/inspector": "3.3.5",
+    "@modelcontextprotocol/inspector": "^2.5.0",
+    "@types/node": "^26.4.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
 }
