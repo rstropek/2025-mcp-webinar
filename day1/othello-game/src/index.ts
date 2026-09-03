@@ -45,12 +45,12 @@ export class OthelloBoard {
   public static fromString(boardString: string, currentPlayer: Player = "B"): OthelloBoard | InvalidBoardResult {
     const rows = boardString.split("\n");
 
-    if (rows.length !== this.BOARD_SIZE) {
+    if (rows.length !== OthelloBoard.BOARD_SIZE) {
       return { error: "Board must contain exactly 8 rows." };
     }
 
     for (const row of rows) {
-      if (row.length !== this.BOARD_SIZE) {
+      if (row.length !== OthelloBoard.BOARD_SIZE) {
         return { error: "Each row must contain exactly 8 fields." };
       }
 
@@ -276,7 +276,7 @@ export class OthelloBoard {
 
     // Parse row (1-8)
     const row = parseInt(rowStr, 10);
-    if (isNaN(row) || row < 1 || row > 8) {
+    if (Number.isNaN(row) || row < 1 || row > 8) {
       return null;
     }
 

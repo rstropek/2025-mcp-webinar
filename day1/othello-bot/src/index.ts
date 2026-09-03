@@ -1,11 +1,29 @@
+import fs from "node:fs";
 import OpenAI from "openai";
-import fs from "fs";
+import type {
+  ResponseFunctionToolCall,
+  ResponseInputItem,
+  ResponseOutputItem,
+  ResponseOutputMessage,
+  ResponseReasoningItem,
+} from "openai/resources/responses/responses";
 import { OthelloBoard } from "othello-game";
+import { handleFunctionCall, tools } from "./functions.js";
 import { readLine } from "./input-helper.js";
-import type { ResponseInputItem } from "openai/resources/responses/responses.mjs";
-import { getValidMovesTool, resetBoardTool, handleFunctionCall, showBoardTool, tryApplyMoveTool } from "./functions.js";
 
-const client = new OpenAI();
+// OpenRouter exposes an OpenAI-compatible Responses API, so we can use the regular
+// OpenAI SDK and just point it to a different base URL.
+const client = new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
+  defaultHeaders: {
+    // Optional headers used by OpenRouter for app attribution/rankings
+    "HTTP-Referer": "https://github.com/rstropek/2025-mcp-webinar",
+    "X-OpenRouter-Title": "Othello Bot",
+  },
+});
+
+const MODEL = "meta/muse-glimmer-30b";
 
 const systemPrompt = await fs.promises.readFile("system-prompt.md", {
   encoding: "utf-8",
@@ -13,71 +31,87 @@ const systemPrompt = await fs.promises.readFile("system-prompt.md", {
 
 const board = OthelloBoard.createEmpty();
 
-let previousResponseId: string | null = null;
+// OpenRouter's Responses API is stateless (no `store`, no `previous_response_id`).
+// Therefore, we have to keep the entire conversation history on the client side
+// and send it with every request.
+const conversation: ResponseInputItem[] = [{ role: "system", content: systemPrompt }];
 
 while (true) {
   const userMessage = await readLine("You:\n");
   console.log();
 
-  const response = createResponse(client, userMessage);
-  for await (const chunk of response) {
+  conversation.push({ role: "user", content: userMessage });
+
+  for await (const chunk of createResponse(client)) {
     process.stdout.write(chunk);
   }
 
   console.log();
 }
 
-async function* createResponse(client: OpenAI, userMessage: string): AsyncGenerator<string> {
-  let input: ResponseInputItem[] = [{ role: "user", content: userMessage }];
+async function* createResponse(client: OpenAI): AsyncGenerator<string> {
   let requiresFurtherActions: boolean;
   do {
     requiresFurtherActions = false;
     let hasOutputText = false;
-    const response = await client.responses.create({
-      model: "gpt-5.2",
-      reasoning: {
-        effort: 'none',
-      },
-      instructions: systemPrompt,
-      input,
-      store: true,
-      previous_response_id: previousResponseId,
+    const functionOutputs: ResponseInputItem[] = [];
+
+    const stream = await client.responses.create({
+      model: MODEL,
+      reasoning: { effort: "low" },
+      input: conversation,
       stream: true,
-      tools: [
-        resetBoardTool,
-        getValidMovesTool,
-        tryApplyMoveTool,
-        showBoardTool,
-      ],
+      tools,
     });
-    
-    input = [];
-    for await (const chunk of response) {
-      if (chunk.type === "response.created") {
-        previousResponseId = chunk.response.id;
-      } else if (chunk.type === "response.output_text.delta") {
-        // Add newline before first text output in each iteration
-        if (!hasOutputText) {
-          yield '\n';
-          hasOutputText = true;
-        }
-        // Text to be displayed to the user
-        yield chunk.delta;
-      } else if (chunk.type === "response.output_item.done" && chunk.item.type === "function_call") {
-        // We have to do a function call
-        writeToConsoleInLightGray(`>>> Calling function ${chunk.item.name}(${JSON.stringify(chunk.item.arguments)})...`);
-        requiresFurtherActions = true;
-        const result = await handleFunctionCall(chunk.item, board);
-        if (result.displayOutput) {
-          yield* result.displayOutput;
-        }
-        writeToConsoleInLightGray(`>>> Function call completed ${JSON.stringify(result.functionResult)}`);
-        input.push(result.functionResult);
-      } else if (chunk.type === "response.completed") {
-        writeToConsoleInLightGray(`>>> Response completed ${JSON.stringify(chunk.response.usage)}`);
+
+    for await (const event of stream) {
+      switch (event.type) {
+        case "response.output_text.delta":
+          // Add newline before first text output in each iteration
+          if (!hasOutputText) {
+            yield "\n";
+            hasOutputText = true;
+          }
+          // Text to be displayed to the user
+          yield event.delta;
+          break;
+
+        case "response.output_item.done":
+          if (event.item.type === "function_call") {
+            // The model wants us to call a function
+            writeToConsoleInLightGray(`>>> Calling function ${event.item.name}(${event.item.arguments})...`);
+            requiresFurtherActions = true;
+            const result = await handleFunctionCall(event.item, board);
+            if (result.displayOutput) {
+              yield* result.displayOutput;
+            }
+            writeToConsoleInLightGray(`>>> Function call completed ${JSON.stringify(result.functionResult)}`);
+            functionOutputs.push(result.functionResult);
+          }
+          break;
+
+        case "response.completed":
+          // Append everything the model produced (messages, reasoning, function calls)
+          // followed by our function results, so the next request has the full context.
+          conversation.push(...event.response.output.filter(isConversationItem), ...functionOutputs);
+          writeToConsoleInLightGray(`>>> Response completed ${JSON.stringify(event.response.usage)}`);
+          break;
+
+        case "response.failed":
+          throw new Error(`Response failed: ${JSON.stringify(event.response.error)}`);
+
+        case "error":
+          throw new Error(`Stream error: ${event.message}`);
       }
     }
   } while (requiresFurtherActions);
+}
+
+/** Output item types that we send back to the model as part of the conversation history. */
+function isConversationItem(
+  item: ResponseOutputItem,
+): item is ResponseOutputMessage | ResponseFunctionToolCall | ResponseReasoningItem {
+  return item.type === "message" || item.type === "function_call" || item.type === "reasoning";
 }
 
 function writeToConsoleInLightGray(text: string): void {

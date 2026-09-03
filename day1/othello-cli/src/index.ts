@@ -1,9 +1,9 @@
-import { OthelloBoard, isInvalidBoardResult, type Move } from "othello-game";
-import * as readline from "readline";
+import * as readline from "node:readline";
+import { isInvalidBoardResult, type Move, OthelloBoard } from "othello-game";
 
 // Global variables
 let board: OthelloBoard = OthelloBoard.createEmpty();
-let rl: readline.Interface = readline.createInterface({
+const rl: readline.Interface = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
@@ -12,7 +12,7 @@ let rl: readline.Interface = readline.createInterface({
  * Display the board with row and column labels
  */
 function displayBoard(): void {
-  console.log("\n" + board.toFormattedString());
+  console.log(`\n${board.toFormattedString()}`);
 }
 
 /**
@@ -85,7 +85,7 @@ function displayWinner(): void {
   const blackCount = (boardString.match(/B/g) || []).length;
   const whiteCount = (boardString.match(/W/g) || []).length;
 
-  console.log("\n" + "=".repeat(40));
+  console.log(`\n${"=".repeat(40)}`);
   console.log("🎮 GAME OVER!");
   console.log("=".repeat(40));
   console.log(`Final Score: Black (●) ${blackCount} - White (○) ${whiteCount}`);
@@ -97,13 +97,13 @@ function displayWinner(): void {
   } else {
     console.log("🤝 It's a tie!");
   }
-  console.log("=".repeat(40) + "\n");
+  console.log(`${"=".repeat(40)}\n`);
 }
 
 /**
  * Prompt the player for input
  */
-function promptMove(validMoves: Move[]): Promise<string> {
+function promptMove(): Promise<string> {
   return new Promise((resolve) => {
     rl.question(`\n${getPlayerName()}'s turn. Enter move (e.g., A1) or 'q' to quit: `, (answer) => {
       resolve(answer.trim());
@@ -115,7 +115,7 @@ function promptMove(validMoves: Move[]): Promise<string> {
  * Main game loop
  */
 async function play(): Promise<void> {
-  console.log("\n" + "=".repeat(40));
+  console.log(`\n${"=".repeat(40)}`);
   console.log("🎮 OTHELLO / REVERSI");
   console.log("=".repeat(40));
   console.log("Rules:");
@@ -160,7 +160,7 @@ async function play(): Promise<void> {
     consecutivePasses = 0;
 
     // Get player input
-    const input = await promptMove(validMoves);
+    const input = await promptMove();
 
     if (input.toLowerCase() === "q") {
       console.log("\n👋 Game quit by player.");

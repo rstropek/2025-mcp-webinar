@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { OthelloBoard, isInvalidBoardResult } from "./index.js";
+import { isInvalidBoardResult, OthelloBoard } from "./index.js";
 
 describe("OthelloBoard", () => {
   test("creates a board with standard initial setup", () => {

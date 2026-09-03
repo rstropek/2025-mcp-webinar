@@ -6,13 +6,13 @@ This is a starter project for building an AI-powered Othello (Reversi) game bot.
 
 - **othello-game**: Core game logic library for Othello/Reversi
 - **othello-cli**: Command-line interface for playing Othello
-- **othello-bot**: AI bot that plays Othello using OpenAI's API
+- **othello-bot**: AI bot that plays Othello using an LLM via [OpenRouter](https://openrouter.ai/) (OpenAI-compatible Responses API)
 
 ## Prerequisites
 
-- Node.js (current LTS recommended)
+- Node.js 22 or newer (current LTS recommended)
 - npm (comes with Node.js)
-- An OpenAI API key
+- An OpenRouter API key
 
 ## Getting Started
 
@@ -38,7 +38,7 @@ This command builds all workspaces (`othello-game`, `othello-cli`, and `othello-
 
 ### 3. Configure Environment Variables
 
-The `othello-bot` package requires an OpenAI API key to function. Create a `.env` file in the `othello-bot` directory:
+The `othello-bot` package requires an OpenRouter API key to function. Create a `.env` file in the `othello-bot` directory:
 
 ```bash
 cd othello-bot
@@ -47,10 +47,10 @@ cd othello-bot
 Create a `.env` file with the following content:
 
 ```
-OPENAI_API_KEY=your_openai_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
 ```
 
-Replace `your_openai_api_key_here` with your actual OpenAI API key.
+Replace `your_openrouter_api_key_here` with your actual OpenRouter API key.
 
 ### 4. Run the Othello Bot
 
@@ -63,5 +63,14 @@ npm start
 
 This will:
 1. Build the TypeScript code
-2. Run the bot using the OpenAI API to make moves
+2. Run the bot using OpenRouter's Responses API (model `meta/muse-glimmer-30b`) to make moves
 
+### 5. Lint and Format
+
+The repository uses [Biome](https://biomejs.dev/) as formatter and linter (configured in `biome.json`):
+
+```bash
+npm run lint       # check formatting, lint rules, and import order
+npm run lint:fix   # apply safe fixes
+npm run format     # format all files
+```
