@@ -4,10 +4,13 @@
 	"main": "index.ts",
 	"scripts": {
 		"build": "tsc && cp -r src/data dist/",
-		"start:sdk-streamable": "tsx ./src/server-sdk-streamable.ts",
+		"start:sdk": "tsx --env-file=.env ./src/server-sdk-streamable.ts",
 		"inspect:sdk": "npx @modelcontextprotocol/inspector http://localhost:3000/mcp",
+		"inspect:mcpjam": "npx @mcpjam/inspector@latest",
 		"docker:build-push": "./build/build.sh",
-		"check": "biome check . --write"
+		"check": "biome check --write .",
+		"lint": "biome check .",
+		"ci": "biome ci ."
 	},
 	"keywords": [],
 	"author": "Rainer Stropek",
@@ -15,20 +18,21 @@
 	"license": "ISC",
 	"description": "",
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.29.0",
-		"@scalekit-sdk/node": "^2.6.3",
+		"@modelcontextprotocol/express": "^2.0.0",
+		"@modelcontextprotocol/node": "^2.0.0",
+		"@modelcontextprotocol/server": "^2.0.0",
+		"@scalekit-sdk/node": "^2.12.0",
 		"cors": "^2.8.6",
-		"dotenv": "^17.4.2",
 		"express": "^5.2.1",
-		"zod": "^4.4.3"
+		"zod": "^4.5.4"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.1",
-		"@modelcontextprotocol/inspector": "^0.22.0",
+		"@biomejs/biome": "^2.5.12",
+		"@modelcontextprotocol/inspector": "^2.5.0",
 		"@types/cors": "^2.8.19",
 		"@types/express": "^5.0.6",
-		"@types/node": "^26.0.1",
-		"tsx": "^4.22.4",
-		"typescript": "^6.0.3"
+		"@types/node": "^26.4.1",
+		"tsx": "^4.23.13",
+		"typescript": "^7.0.2"
 	}
 }

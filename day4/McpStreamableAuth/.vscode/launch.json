@@ -7,7 +7,7 @@
 		{
 			"name": "Launch via NPM",
 			"request": "launch",
-			"runtimeArgs": ["start"],
+			"runtimeArgs": ["run", "start:sdk"],
 			"runtimeExecutable": "npm",
 			"skipFiles": ["<node_internals>/**"],
 			"type": "node"
