@@ -1,3 +1,4 @@
+using ModelContextProtocol.Extensions.Apps;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -18,13 +19,14 @@ public static class Step4TalkToModel
 
     public static IEnumerable<McpServerTool> Tools() =>
     [
-        McpServerTool.Create(Open, new McpServerToolCreateOptions
-        {
-            Name = "step4-talk-to-model",
-            Title = "Step 4 — Talk to model",
-            Description = "Opens a panel with buttons that push messages, pin context, and open links via the host.",
-            Meta = UiMeta.ResourceUri(ResourceUri),
-        }),
+        McpApps.SetAppUi(
+            McpServerTool.Create(Open, new McpServerToolCreateOptions
+            {
+                Name = "step4-talk-to-model",
+                Title = "Step 4 — Talk to model",
+                Description = "Opens a panel with buttons that push messages, pin context, and open links via the host.",
+            }),
+            new McpUiToolMeta { ResourceUri = ResourceUri }),
     ];
 
     public static McpServerResource Resource(ViewStore views) =>
@@ -32,7 +34,7 @@ public static class Step4TalkToModel
         {
             UriTemplate = ResourceUri,
             Name = "step4-talk-to-model-ui",
-            MimeType = ViewStore.AppMime,
+            MimeType = McpApps.HtmlMimeType,
             Description = "Step 4 — Talk to model view",
         });
 

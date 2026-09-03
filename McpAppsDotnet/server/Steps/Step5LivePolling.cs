@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using ModelContextProtocol.Extensions.Apps;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -25,22 +26,24 @@ public static class Step5LivePolling
 
     public static IEnumerable<McpServerTool> Tools() =>
     [
-        McpServerTool.Create(Sample, new McpServerToolCreateOptions
-        {
-            Name = "step5-monitor",
-            Title = "Step 5 — Live host monitor",
-            Description = "Opens a dashboard that polls host stats every 2 s via an app-only tool.",
-            Meta = UiMeta.ResourceUri(ResourceUri),
-        }),
+        McpApps.SetAppUi(
+            McpServerTool.Create(Sample, new McpServerToolCreateOptions
+            {
+                Name = "step5-monitor",
+                Title = "Step 5 — Live host monitor",
+                Description = "Opens a dashboard that polls host stats every 2 s via an app-only tool.",
+            }),
+            new McpUiToolMeta { ResourceUri = ResourceUri }),
         // App-only polling tool. The model has no idea this exists, so it can't
         // accidentally start spamming it.
-        McpServerTool.Create(Sample, new McpServerToolCreateOptions
-        {
-            Name = "step5-stats",
-            Title = "Step 5 — Poll Stats (app-only)",
-            Description = "Returns the latest host stats sample. Hidden from the model.",
-            Meta = UiMeta.AppOnly(),
-        }),
+        McpApps.SetAppUi(
+            McpServerTool.Create(Sample, new McpServerToolCreateOptions
+            {
+                Name = "step5-stats",
+                Title = "Step 5 — Poll Stats (app-only)",
+                Description = "Returns the latest host stats sample. Hidden from the model.",
+            }),
+            new McpUiToolMeta { Visibility = [McpUiToolVisibility.App] }),
     ];
 
     public static McpServerResource Resource(ViewStore views) =>
@@ -48,7 +51,7 @@ public static class Step5LivePolling
         {
             UriTemplate = ResourceUri,
             Name = "step5-live-polling-ui",
-            MimeType = ViewStore.AppMime,
+            MimeType = McpApps.HtmlMimeType,
             Description = "Step 5 — Live polling view",
         });
 

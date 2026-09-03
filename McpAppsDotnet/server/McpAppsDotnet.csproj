@@ -5,13 +5,24 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>McpAppsDotnet</RootNamespace>
+    <!-- Every type in ModelContextProtocol.Extensions.Apps is marked
+         [Experimental("MCPEXP003")] because the MCP Apps extension (SEP-1865) is
+         still an extension, not part of the base spec. Opting out of the warning
+         once here is the documented way to use it; the alternative would be a
+         #pragma around every call site. -->
+    <NoWarn>$(NoWarn);MCPEXP003</NoWarn>
     <!-- Where the Vite single-file views live. Built by the BuildUiViews target,
          copied into the output/publish dir by the CopyUiViews/PublishUiViews targets. -->
     <UiDir>$(MSBuildProjectDirectory)/../ui</UiDir>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.4.0" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+    <!-- Official MCP Apps extension package: strongly typed _meta.ui models
+         (McpUiToolMeta, McpUiResourceMeta, …) plus the McpApps helpers that write
+         them into a tool's/resource's _meta. Replaces the hand-rolled UiMeta.cs
+         this sample used before. -->
+    <PackageReference Include="ModelContextProtocol.Extensions.Apps" Version="2.2.0" />
   </ItemGroup>
 
   <!--

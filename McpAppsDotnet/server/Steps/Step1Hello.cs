@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ModelContextProtocol.Extensions.Apps;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -21,14 +22,17 @@ public static class Step1Hello
 
     public static IEnumerable<McpServerTool> Tools() =>
     [
-        McpServerTool.Create(Hello, new McpServerToolCreateOptions
-        {
-            Name = "step1-hello",
-            Title = "Step 1 — Hello",
-            Description = "Returns a greeting and the current server time. Renders an MCP App UI.",
-            // This single line is what turns a tool into an MCP App tool.
-            Meta = UiMeta.ResourceUri(ResourceUri),
-        }),
+        // McpApps.SetAppUi writes _meta.ui on the finished tool and returns it, so it
+        // can wrap the McpServerTool.Create call. That one line is what turns a plain
+        // tool into an MCP App tool.
+        McpApps.SetAppUi(
+            McpServerTool.Create(Hello, new McpServerToolCreateOptions
+            {
+                Name = "step1-hello",
+                Title = "Step 1 — Hello",
+                Description = "Returns a greeting and the current server time. Renders an MCP App UI.",
+            }),
+            new McpUiToolMeta { ResourceUri = ResourceUri }),
     ];
 
     public static McpServerResource Resource(ViewStore views) =>
@@ -36,7 +40,7 @@ public static class Step1Hello
         {
             UriTemplate = ResourceUri,
             Name = "step1-hello-ui",
-            MimeType = ViewStore.AppMime,
+            MimeType = McpApps.HtmlMimeType,
             Description = "Step 1 — Hello view",
         });
 

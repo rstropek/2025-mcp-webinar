@@ -1,0 +1,13 @@
+{
+	"servers": {
+		"DemoServer": {
+			"url": "http://localhost:5147/mcp",
+			"type": "http"
+		},
+		"McpStreamableServer": {
+			"url": "http://localhost:5186/mcp",
+			"type": "http"
+		}
+	},
+	"inputs": []
+}

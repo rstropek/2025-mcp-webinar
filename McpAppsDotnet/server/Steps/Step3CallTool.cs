@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ModelContextProtocol.Extensions.Apps;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -34,22 +35,27 @@ public static class Step3CallTool
     public static IEnumerable<McpServerTool> Tools() =>
     [
         // Model-facing tool: this is the one shown in the model's tool list.
-        McpServerTool.Create(Pick, new McpServerToolCreateOptions
-        {
-            Name = "step3-quote",
-            Title = "Step 3 — Random Quote",
-            Description = "Shows a random programming quote and an interactive UI to fetch more.",
-            Meta = UiMeta.ResourceUri(ResourceUri),
-        }),
+        // Leaving Visibility unset = visible to both model and app (the default).
+        McpApps.SetAppUi(
+            McpServerTool.Create(Pick, new McpServerToolCreateOptions
+            {
+                Name = "step3-quote",
+                Title = "Step 3 — Random Quote",
+                Description = "Shows a random programming quote and an interactive UI to fetch more.",
+            }),
+            new McpUiToolMeta { ResourceUri = ResourceUri }),
         // App-only tool: invisible to the model. The View calls it when the user
-        // clicks "Another one" — no conversation turn is consumed.
-        McpServerTool.Create(Pick, new McpServerToolCreateOptions
-        {
-            Name = "step3-next-quote",
-            Title = "Step 3 — Next Quote (app-only)",
-            Description = "Returns another random quote. Hidden from the model.",
-            Meta = UiMeta.AppOnly(),
-        }),
+        // clicks "Another one" — no conversation turn is consumed. Note there is no
+        // ResourceUri here: the tool renders nothing itself, it only feeds the iframe
+        // that step3-quote already opened.
+        McpApps.SetAppUi(
+            McpServerTool.Create(Pick, new McpServerToolCreateOptions
+            {
+                Name = "step3-next-quote",
+                Title = "Step 3 — Next Quote (app-only)",
+                Description = "Returns another random quote. Hidden from the model.",
+            }),
+            new McpUiToolMeta { Visibility = [McpUiToolVisibility.App] }),
     ];
 
     public static McpServerResource Resource(ViewStore views) =>
@@ -57,7 +63,7 @@ public static class Step3CallTool
         {
             UriTemplate = ResourceUri,
             Name = "step3-call-tool-ui",
-            MimeType = ViewStore.AppMime,
+            MimeType = McpApps.HtmlMimeType,
             Description = "Step 3 — Random quote view",
         });
 

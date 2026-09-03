@@ -12,3 +12,6 @@ ui/dist/
 # AI
 .agents
 .claude
+
+# pi.dev project-local MCP overrides
+.pi/

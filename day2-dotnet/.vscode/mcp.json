@@ -1,0 +1,23 @@
+{
+	"servers": {
+		"NoSdk": {
+			"type": "stdio",
+			"command": "dotnet",
+			"args": [
+				"run",
+				"--project",
+				"McpServerNoSdk"
+			]
+		},
+		"Sdk": {
+			"type": "stdio",
+			"command": "dotnet",
+			"args": [
+				"run",
+				"--project",
+				"McpServerSdk"
+			]
+		}
+	},
+	"inputs": []
+}

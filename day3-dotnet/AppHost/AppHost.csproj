@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.2.4">
+<Project Sdk="Aspire.AppHost.Sdk/13.5.3">
 
   <ItemGroup>
     <ProjectReference Include="..\DemoServer\DemoServer.csproj" />
@@ -11,6 +11,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>bfbcdbb1-4b0d-4bfc-bf80-6f5afa86323d</UserSecretsId>
+    <!-- Aspire 13.5+ can delegate DCP/dashboard resolution to the Aspire CLI bundle. This sample is
+         launched with plain dotnet run (with the AppHost project) and uses the NuGet-restored orchestration
+         packages, so we opt out explicitly and silence ASPIRE010 (see https://aka.ms/aspire/diagnostics/aspire010). -->
+    <AspireUseCliBundle>false</AspireUseCliBundle>
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>
 
 </Project>

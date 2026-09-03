@@ -1,0 +1,12 @@
+{
+  "settings": {
+    "directTools": true
+  },
+  "mcpServers": {
+    "winter-sdk-streamable": {
+      "url": "http://localhost:5186/mcp",
+      "protocolVersion": "auto",
+      "disabled": true
+    }
+  }
+}

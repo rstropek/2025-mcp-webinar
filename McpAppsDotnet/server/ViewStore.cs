@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using ModelContextProtocol;
+using ModelContextProtocol.Extensions.Apps;
 using ModelContextProtocol.Protocol;
 
 namespace McpAppsDotnet;
@@ -17,9 +19,6 @@ namespace McpAppsDotnet;
 /// </summary>
 public sealed class ViewStore
 {
-    /// <summary>The MCP Apps profile MIME type that marks a resource as an embeddable UI.</summary>
-    public const string AppMime = "text/html;profile=mcp-app";
-
     private static readonly string ViewsDir = Path.Combine(AppContext.BaseDirectory, "views");
 
     private readonly ConcurrentDictionary<string, string> _cache = new();
@@ -30,21 +29,40 @@ public sealed class ViewStore
     /// <summary>
     /// Builds the <c>resources/read</c> result for a UI resource: a single
     /// <see cref="TextResourceContents"/> carrying the HTML, the MCP Apps MIME
-    /// type, and optional content-level <c>_meta</c> (used by step 6 for CSP).
+    /// type (<see cref="McpApps.HtmlMimeType"/>), and optional content-level
+    /// <c>_meta.ui</c> (used by step 6 for CSP).
     /// </summary>
-    public ReadResourceResult Read(string uri, string fileName, JsonObject? meta = null) => new()
+    /// <remarks>
+    /// The Apps package ships helpers for the tool and the resource *listing*
+    /// (<c>McpApps.SetAppUi</c> / <c>McpApps.SetResourceUi</c>) but none for the
+    /// <em>content</em> level, because <see cref="ResourceContents.Meta"/> is a raw
+    /// <see cref="JsonObject"/>. So we serialize the typed
+    /// <see cref="McpUiResourceMeta"/> ourselves with
+    /// <see cref="McpApps.SerializerOptions"/> — those options carry the
+    /// source-generated contracts (and the camelCase/ignore-null naming) for the
+    /// Apps types, so the result is exactly the JSON the host expects — and hang it
+    /// under the <c>ui</c> key.
+    /// </remarks>
+    public ReadResourceResult Read(string uri, string fileName, McpUiResourceMeta? ui = null) => new()
     {
         Contents =
         [
             new TextResourceContents
             {
                 Uri = uri,
-                MimeType = AppMime,
+                MimeType = McpApps.HtmlMimeType,
                 Text = Html(fileName),
-                Meta = meta,
+                Meta = ui is null ? null : MetaObject(ui),
             },
         ],
     };
+
+    /// <summary>
+    /// Serializes a <see cref="McpUiResourceMeta"/> into the raw <c>{ "ui": … }</c>
+    /// <see cref="JsonObject"/> that the SDK's untyped <c>Meta</c> properties take.
+    /// </summary>
+    public static JsonObject MetaObject(McpUiResourceMeta ui) =>
+        new() { ["ui"] = JsonSerializer.SerializeToNode(ui, McpApps.SerializerOptions) };
 
     private static string Load(string fileName)
     {

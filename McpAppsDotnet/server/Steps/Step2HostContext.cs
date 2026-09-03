@@ -1,3 +1,4 @@
+using ModelContextProtocol.Extensions.Apps;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -16,14 +17,15 @@ public static class Step2HostContext
 
     public static IEnumerable<McpServerTool> Tools() =>
     [
-        McpServerTool.Create(Open, new McpServerToolCreateOptions
-        {
-            Name = "step2-host-context",
-            Title = "Step 2 — Host Context",
-            Description = "Renders an MCP App that displays the host context (theme, display mode, " +
-                          "dimensions) and re-renders on changes.",
-            Meta = UiMeta.ResourceUri(ResourceUri),
-        }),
+        McpApps.SetAppUi(
+            McpServerTool.Create(Open, new McpServerToolCreateOptions
+            {
+                Name = "step2-host-context",
+                Title = "Step 2 — Host Context",
+                Description = "Renders an MCP App that displays the host context (theme, display mode, " +
+                              "dimensions) and re-renders on changes.",
+            }),
+            new McpUiToolMeta { ResourceUri = ResourceUri }),
     ];
 
     public static McpServerResource Resource(ViewStore views) =>
@@ -31,7 +33,7 @@ public static class Step2HostContext
         {
             UriTemplate = ResourceUri,
             Name = "step2-host-context-ui",
-            MimeType = ViewStore.AppMime,
+            MimeType = McpApps.HtmlMimeType,
             Description = "Step 2 — Host context view",
         });
 

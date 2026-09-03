@@ -1,0 +1,19 @@
+{
+  "settings": {
+    "directTools": true
+  },
+  "mcpServers": {
+    "winter-no-sdk": {
+      "command": "dotnet",
+      "args": ["run", "--project", "McpServerNoSdk", "--no-build"],
+      "protocolVersion": "auto",
+      "disabled": true
+    },
+    "winter-sdk": {
+      "command": "dotnet",
+      "args": ["run", "--project", "McpServerSdk", "--no-build"],
+      "protocolVersion": "auto",
+      "disabled": true
+    }
+  }
+}

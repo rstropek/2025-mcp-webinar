@@ -1,0 +1,12 @@
+{
+  "settings": {
+    "directTools": true
+  },
+  "mcpServers": {
+    "demo-echo": {
+      "url": "http://localhost:5147/mcp",
+      "protocolVersion": "auto",
+      "disabled": true
+    }
+  }
+}

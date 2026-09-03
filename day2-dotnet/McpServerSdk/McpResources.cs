@@ -8,7 +8,10 @@ namespace McpServerSdk;
 [McpServerToolType]
 public static class WinterPasswordTools
 {
-    [McpServerTool, Description("Generates a password made of winter-themed words.")]
+    // `Title` is the human-readable label a host shows in its UI, `ReadOnly = true`
+    // is a tool annotation telling the host that calling this tool has no side
+    // effects - hosts use it to decide whether a call needs a confirmation prompt.
+    [McpServerTool(Title = "Winter password", ReadOnly = true), Description("Generates a password made of winter-themed words.")]
     public static string WinterPassword(
         [Description("Minimum length of the password")] int minLength = 16,
         [Description("Enable special character replacement")] bool special = false)
@@ -17,7 +20,9 @@ public static class WinterPasswordTools
         return PasswordGenerator.BuildPassword(opts);
     }
 
-    [McpServerTool(Name = "winter_password_batch"), Description("Generates N passwords with the same options.")]
+    // The batch tool returns a string[]. That is deliberately NOT declared as
+    // structured content: `structuredContent` must be a JSON object, not an array.
+    [McpServerTool(Name = "winter_password_batch", Title = "Winter password batch", ReadOnly = true), Description("Generates N passwords with the same options.")]
     public static string[] WinterPasswordBatch(
         [Description("Number of passwords to generate")] int count = 5,
         [Description("Minimum length of the password")] int minLength = 16,

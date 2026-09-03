@@ -1,0 +1,219 @@
+@host = http://localhost:5147
+
+### A plain ASP.NET Core route - nothing MCP about it. Just proves the server is up.
+GET {{host}}/ping
+
+###
+# `server/discover` is the entry point of the 2026-07-28 revision. It replaces
+# the `initialize` handshake: instead of negotiating once and keeping a session,
+# the client asks "what do you support?" and may cache the answer (`ttlMs`,
+# `cacheScope`). Every request from here on is completely self-contained.
+#
+# Observe in the response: `supportedVersions`, `resultType: "complete"` and the
+# `_meta["io.modelcontextprotocol/serverInfo"]` envelope.
+POST {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: server/discover
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "server/discover",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": { "name": "REST Client", "version": "1.0.0" },
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+
+###
+# `tools/list`. No session id anywhere - the `_meta` envelope carries everything
+# the server needs to know about this client.
+#
+# Observe: the result carries the cache hints `ttlMs` and `cacheScope`, which
+# every list result may use so that clients can remember the answer.
+POST {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/list
+
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": { "name": "REST Client", "version": "1.0.0" },
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+
+###
+# Call the tool WITHOUT thinking. Nothing happens before the result.
+#
+# Note the `Mcp-Name` header: `tools/call`, `resources/read` and `prompts/get`
+# must name their target in a header so that proxies and gateways can route and
+# authorize a request without parsing the JSON body.
+#
+# Observe: the C# SDK always answers with `Content-Type: text/event-stream` (a
+# one-event stream carrying the result) - see the readme, "JSON vs. SSE".
+POST {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: echo-tool
+
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "echo-tool",
+    "arguments": {
+      "message": "Hello World!",
+      "thinkHard": false
+    },
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": { "name": "REST Client", "version": "1.0.0" },
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+
+###
+# The same call WITH `thinkHard` and a `progressToken`. The tool now emits three
+# `notifications/progress` messages before its result, so the stream carries
+# four SSE events, the result being the last one. THIS is the difference
+# Streamable HTTP makes.
+#
+# The REST Client extension buffers the stream and shows it once it is complete.
+# Use `./curl.sh` to watch the events trickle in live, one per second.
+POST {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/call
+Mcp-Name: echo-tool
+
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "tools/call",
+  "params": {
+    "name": "echo-tool",
+    "arguments": {
+      "message": "Hello World!",
+      "thinkHard": true
+    },
+    "_meta": {
+      "progressToken": "echo-1",
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": { "name": "REST Client", "version": "1.0.0" },
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+
+###
+# Error case 1: a protocol version this server does not implement.
+#
+# Observe: the dedicated JSON-RPC error `-32022` (UnsupportedProtocolVersion),
+# with the list of versions the server actually speaks in
+# `error.data.supported`. A client can use that to pick a version it also knows
+# instead of just failing. The C# SDK answers this one with HTTP 200 and the
+# error inside the SSE stream (the header mismatch below is a real HTTP 400,
+# because there the request never reaches the JSON-RPC layer).
+POST {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2025-06-18
+Mcp-Method: tools/list
+
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "tools/list",
+  "params": {
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2025-06-18",
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+
+###
+# Error case 2: the `Mcp-Method` header says `tools/list`, the body says
+# `tools/call`. Headers and body must agree - otherwise a gateway could be
+# tricked into authorizing a harmless list request while a tool call goes
+# through.
+#
+# Observe: HTTP 400 plus JSON-RPC error `-32020` (HeaderMismatch).
+POST {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2026-07-28
+Mcp-Method: tools/list
+Mcp-Name: echo-tool
+
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "tools/call",
+  "params": {
+    "name": "echo-tool",
+    "arguments": {
+      "message": "Hello World!",
+      "thinkHard": false
+    },
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+
+###
+# The old world, for comparison: a 2025-era client opens with `initialize` and
+# no `_meta` envelope at all. The SDK recognizes that and serves it - in
+# `Stateless` mode from a fresh server instance per request, so no
+# `Mcp-Session-Id` is minted at all. This is why VS Code and other 2025-era
+# hosts still work against this server.
+#
+# Observe: the negotiated `protocolVersion` in the result is a 2025-era version.
+# `initialize` never negotiates 2026-07-28 - that era has no handshake.
+POST {{host}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2025-06-18",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "REST Client",
+      "title": "REST Client in VSCode",
+      "version": "1.0.0"
+    }
+  }
+}
+
+###
+# GET on the MCP endpoint. In the 2025 world this opened the standalone SSE
+# stream; in the 2026-07-28 revision that stream is gone and only POST remains.
+#
+# Observe: HTTP 405 Method Not Allowed. The same goes for DELETE (which used to
+# terminate a session).
+GET {{host}}/mcp
+Accept: text/event-stream
