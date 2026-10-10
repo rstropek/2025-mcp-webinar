@@ -1,0 +1,27 @@
+{
+  "name": "webmcp-pony-password",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WebMCP demo: a web page that exposes pony-password tools to in-browser AI agents via document.modelContext",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc",
+    "check": "biome check --write .",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "ci": "biome ci ."
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@mcp-b/webmcp-polyfill": "^6.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "webmcp-types": "^0.1.10"
+  }
+}

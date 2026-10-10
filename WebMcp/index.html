@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pony Password Vault (WebMCP)</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>🦄 Pony Password Vault</h1>
+      <p id="support" class="badge">Checking WebMCP support…</p>
+    </header>
+
+    <main>
+      <!-- 1. Regular UI for humans. The imperative tools in main.ts reuse the same functions. -->
+      <section class="card">
+        <h2>Generate a password</h2>
+        <div class="row">
+          <label>Min. length <input id="min-length" type="number" min="1" max="64" value="16" /></label>
+          <label><input id="special" type="checkbox" /> Special characters</label>
+          <button id="generate" type="button">Generate</button>
+        </div>
+        <output id="generated" class="password">–</output>
+      </section>
+
+      <!--
+        2. Declarative WebMCP tool: the browser derives the tool's input schema from the named
+        form controls. There is no `toolautosubmit`, so an agent can only FILL the form -
+        a human still has to click "Save" (human in the loop).
+      -->
+      <section class="card">
+        <h2>Save a password</h2>
+        <form
+          id="save-form"
+          toolname="save_password"
+          tooldescription="Prepares saving a password in the user's pony password vault. The user has to confirm by clicking Save."
+        >
+          <label>
+            Label
+            <input name="label" required toolparamdescription="What the password is for, e.g. 'Netflix'" />
+          </label>
+          <label>
+            Password
+            <input name="password" required toolparamdescription="The password to store" />
+          </label>
+          <button type="submit">Save</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Vault</h2>
+        <ul id="vault"></ul>
+        <button id="clear" type="button" class="secondary">Clear vault</button>
+      </section>
+
+      <!--
+        3. Agent simulator. In real life, the BROWSER (or a browser extension) is the agent host and
+        calls the tools. Most browsers do not ship an agent yet, so this panel uses
+        document.modelContext.getTools()/executeTool() to play the agent's role.
+      -->
+      <section class="card agent">
+        <h2>🤖 Agent simulator</h2>
+        <div class="row">
+          <select id="tool-select"></select>
+          <button id="run-tool" type="button">Call tool</button>
+        </div>
+        <p id="tool-description" class="muted"></p>
+        <textarea id="tool-args" rows="4" spellcheck="false">{}</textarea>
+        <pre id="tool-result" class="muted">Tool results appear here.</pre>
+      </section>
+
+      <section class="card">
+        <h2>Activity log</h2>
+        <ol id="log" reversed></ol>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
