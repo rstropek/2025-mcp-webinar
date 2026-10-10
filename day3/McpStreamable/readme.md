@@ -2,7 +2,7 @@
 
 ## Overview
 
-This folder contains the pony-password samples as **HTTP** servers. They use MCP TypeScript SDK **v2** (`@modelcontextprotocol/server`, `@modelcontextprotocol/client`, `@modelcontextprotocol/express` and `@modelcontextprotocol/node`, all `2.0.0`). SDK v2 implements MCP spec revision **2026-07-28** ([changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)) while still serving legacy 2025-era clients (VS Code, pi-mcp-adapter in its default mode) from the very same server code. SDK docs: https://ts.sdk.modelcontextprotocol.io/v2/. Sample 1 has no SDK dependency and speaks both eras of the wire protocol by hand — it is the best place to see what changed under the hood.
+This folder contains the pony-password samples as **HTTP** servers. They use MCP TypeScript SDK **v2** (`@modelcontextprotocol/server`, `@modelcontextprotocol/client`, `@modelcontextprotocol/express` and `@modelcontextprotocol/node`). SDK v2 implements MCP spec revision **2026-07-28** ([changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)) while still serving legacy 2025-era clients (VS Code, pi-mcp-adapter in its default mode) from the very same server code. SDK docs: https://ts.sdk.modelcontextprotocol.io/v2/. Sample 1 has no SDK dependency and speaks both eras of the wire protocol by hand — it is the best place to see what changed under the hood.
 
 Prerequisites: Node.js 22+ (the SDK itself only requires 20+) and npm.
 
@@ -393,3 +393,5 @@ The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) can be po
 npm run start:sdk       # or npm run start:no-sdk
 npm run inspect:sdk     # or npm run inspect:no-sdk
 ```
+
+`inspect:sdk` passes `--protocol-era modern`. Without it the Inspector connects with the legacy 2025-era `initialize` handshake. The server answers such requests statelessly, so it cannot push `elicitation/create`, and `pony_password_with_preferences` fails with "did not declare the required capability". In the modern era the tool returns `input_required`, the Inspector shows the *Elicitation Request* form, and on *Submit* it retries the call with your answer (MRTR).

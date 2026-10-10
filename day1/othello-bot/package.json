@@ -12,12 +12,12 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "openai": "^7.9.0",
+    "openai": "^7.32.0",
     "othello-game": "file:../othello-game",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.5",
     "typescript": "^7.0.2"
   }
 }

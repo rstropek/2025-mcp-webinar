@@ -6,30 +6,37 @@
 ┌──────────────────────────────────────────────────────────────────────┐
 │                            CLIENT (client.ts)                        │
 │                                                                      │
+│  Setup:                                                              │
+│  client = await new ClientFactory().createFromUrl(                   │
+│    "http://localhost:4000")  ← downloads the Agent Card first        │
+│                                                                      │
 │  State:                                                              │
 │  ┌────────────────────────────────────────┐                          │
-│  │ contextId: string | undefined          │                          │
-│  │ taskId: string | undefined             │                          │
+│  │ contextId: string  ("" = new convo)    │                          │
+│  │ taskId: string     ("" = no task yet)  │                          │
 │  └────────────────────────────────────────┘                          │
 │                                                                      │
 │  On each message:                                                    │
 │  1. Read user input                                                  │
-│  2. Send message with contextId + taskId (if have them)              │
-│  3. Receive response                                                 │
-│  4. Extract and store contextId + taskId from response               │
-│  5. Display agent's message                                          │
+│  2. client.sendMessage(SendMessageRequest) with contextId + taskId   │
+│  3. Receive result: Task | Message ("status" in result → Task)       │
+│  4. Task: store task.contextId + task.id                             │
+│  5. Display agent's reply from task.status.message                   │
+│  6. TASK_STATE_COMPLETED → reset contextId + taskId                  │
 └──────────────────────────────────────────────────────────────────────┘
                                   │
-                                  │ HTTP POST /send-message
-                                  │ { message: {...}, contextId?, taskId? }
+                                  │ JSON-RPC POST /  (method: "SendMessage")
+                                  │ { message: { role: "ROLE_USER",
+                                  │   parts: [{ text }], contextId?, taskId? } }
                                   ↓
 ┌──────────────────────────────────────────────────────────────────────┐
 │                    SERVER (server.ts + A2A SDK)                      │
 │                                                                      │
 │  ┌────────────────────────────────────────────────────────────────┐  │
-│  │          A2AExpressApp (HTTP endpoint handler)                 │  │
-│  │  • Receives HTTP requests                                      │  │
-│  │  • Routes to DefaultRequestHandler                             │  │
+│  │          express app (HTTP endpoint handlers)                  │  │
+│  │  • /.well-known/agent-card.json → agentCardHandler             │  │
+│  │  • /  → jsonRpcHandler (UserBuilder.noAuthentication)          │  │
+│  │  • Routes JSON-RPC requests to DefaultRequestHandler           │  │
 │  └────────────────────────────────────────────────────────────────┘  │
 │                              │                                       │
 │                              ↓                                       │
@@ -38,20 +45,21 @@
 │  │                                                                │  │
 │  │  BEFORE executing:                                             │  │
 │  │  1. Extract contextId/taskId from request                      │  │
-│  │  2. Call taskStore.getTask(taskId) ────────┐                   │  │
+│  │  2. If taskId: taskStore.load(taskId) ─────┐                   │  │
+│  │     and append userMessage to its history  │                   │  │
 │  │  3. Build RequestContext object:           │                   │  │
 │  │     {                                      │                   │  │
 │  │       taskId,                              │                   │  │
 │  │       contextId,                           │                   │  │
 │  │       userMessage,                         │                   │  │
-│  │       task ← from store (or null)          │                   │  │
+│  │       task ← from store (or undefined)     │                   │  │
 │  │     }                                      │                   │  │
 │  │  4. Call executor.execute()                │                   │  │
 │  │                                            │                   │  │
 │  │  AFTER executing:                          │                   │  │
 │  │  5. Listen to EventBus                     │                   │  │
-│  │  6. Update taskStore with new messages ────┘                   │  │
-│  │  7. Return response to client                                  │  │
+│  │  6. taskStore.save(task) with new messages ┘                   │  │
+│  │  7. Return Task or Message to client                           │  │
 │  └────────────────────────────────────────────────────────────────┘  │
 │                    │                              ↑                  │
 │                    │ RequestContext               │ EventBus         │
@@ -60,28 +68,34 @@
 │  │         PizzaOrderExecutor (your agent logic)                  │  │
 │  │                                                                │  │
 │  │  execute(requestContext, eventBus) {                           │  │
-│  │    // 1. Access history from previous turns                    │  │
+│  │    // 1. Access history (follow-up turns)                      │  │
 │  │    const history = [];                                         │  │
-│  │    if (requestContext.task?.history) {                         │  │
+│  │    if (requestContext.task) {                                  │  │
 │  │      for (const msg of requestContext.task.history) {          │  │
-│  │        history.push(msg); ← PREVIOUS MESSAGES HERE!            │  │
+│  │        history.push(msg); ← ALL MESSAGES incl. current one!    │  │
 │  │      }                                                         │  │
+│  │    } else {                                                    │  │
+│  │      // 2. First turn: only the current message                │  │
+│  │      history.push(requestContext.userMessage);                 │  │
 │  │    }                                                           │  │
-│  │                                                                │  │
-│  │    // 2. Add current message                                   │  │
-│  │    history.push(requestContext.userMessage);                   │  │
 │  │                                                                │  │
 │  │    // 3. Send to LLM with full context                         │  │
 │  │    const response = await openai.create({ input: history });   │  │
 │  │                                                                │  │
-│  │    // 4. Publish results                                       │  │
-│  │    eventBus.publish(agentMessage); ───────┐                    │  │
-│  │    eventBus.publish(statusUpdate);        │                    │  │
-│  │  }                                        │                    │  │
+│  │    // 4. Publish results - Task or Message ALWAYS first!       │  │
+│  │    if (task) {   // existing task or new one                   │  │
+│  │      eventBus.publish(AgentEvent.task(task)); ──┐              │  │
+│  │      eventBus.publish(AgentEvent.statusUpdate(  │              │  │
+│  │        { status: { state, message } }));        │              │  │
+│  │    } else {      // pizza known right away      │              │  │
+│  │      eventBus.publish(AgentEvent.message(msg));─┤              │  │
+│  │    }                                            │              │  │
+│  │    eventBus.finished();                         │              │  │
+│  │  }                                              │              │  │
 │  └──────────────────────────────────────────────────────────────┬─┘  │
-│                                              │                  │    │
-│                                              │ Updates          │    │
-│                                              ↓                  │    │
+│                                                    │            │    │
+│                                                    │ Updates    │    │
+│                                                    ↓            │    │
 │  ┌────────────────────────────────────────────────────────────────┐  │
 │  │              InMemoryTaskStore (the "memory")                  │  │
 │  │                                                                │  │
@@ -91,11 +105,14 @@
 │  │    "task-abc": {                                               │  │
 │  │      id: "task-abc",                                           │  │
 │  │      contextId: "ctx-123",                                     │  │
-│  │      status: { state: "input-required" },                      │  │
+│  │      status: {                                                 │  │
+│  │        state: TaskState.TASK_STATE_INPUT_REQUIRED,             │  │
+│  │        message: { role: Role.ROLE_AGENT, ... }                 │  │
+│  │      },                                                        │  │
 │  │      history: [                                                │  │
-│  │        { role: "user", parts: [...], messageId: "msg-1" },     │  │
-│  │        { role: "agent", parts: [...], messageId: "msg-2" },    │  │
-│  │        { role: "user", parts: [...], messageId: "msg-3" },     │  │
+│  │        { role: Role.ROLE_USER, parts: [...], messageId: ... }, │  │
+│  │        { role: Role.ROLE_AGENT, parts: [...], messageId: ... },│  │
+│  │        { role: Role.ROLE_USER, parts: [...], messageId: ... }, │  │
 │  │        ...                                                     │  │
 │  │      ]                                                         │  │
 │  │    },                                                          │  │
@@ -103,12 +120,17 @@
 │  │  }                                                             │  │
 │  │                                                                │  │
 │  │  Methods:                                                      │  │
-│  │  • getTask(taskId) → returns Task with full history            │  │
-│  │  • createTask(task) → stores new task                          │  │
-│  │  • updateTask(update) → adds messages to history               │  │
+│  │  • load(taskId) → returns Task with full history               │  │
+│  │  • save(task) → stores new or updated task                     │  │
+│  │  • list(params) → lists stored tasks                           │  │
 │  └────────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────────┘
 ```
+
+> Parts in A2A v1.0 carry their content as a oneof:
+> `{ content: { $case: "text", value: "..." }, mediaType: "text/plain", ... }`.
+> On the wire (JSON-RPC) this becomes `{ "text": "..." }`, and enums are
+> serialized as strings such as `"ROLE_USER"` or `"TASK_STATE_INPUT_REQUIRED"`.
 
 ---
 
@@ -118,78 +140,85 @@
 Turn 1: Initial Request
 ═══════════════════════
 
-Client                   A2AExpressApp          DefaultRequestHandler          InMemoryTaskStore          PizzaOrderExecutor
+Client                 jsonRpcHandler           DefaultRequestHandler          InMemoryTaskStore          PizzaOrderExecutor
   │                            │                           │                           │                           │
   │ "I want pizza"             │                           │                           │                           │
   │ (no contextId/taskId)      │                           │                           │                           │
   ├───────────────────────────>│                           │                           │                           │
   │                            │                           │                           │                           │
-  │                            │  Process request          │                           │                           │
+  │                            │  SendMessage (JSON-RPC)   │                           │                           │
   │                            ├──────────────────────────>│                           │                           │
   │                            │                           │                           │                           │
-  │                            │                           │  getTask(taskId)          │                           │
-  │                            │                           ├──────────────────────────>│                           │
-  │                            │                           │                           │                           │
-  │                            │                           │  null (no task exists)    │                           │
-  │                            │                           │<──────────────────────────┤                           │
+  │                            │                           │  No taskId in message     │                           │
+  │                            │                           │  → nothing to load        │                           │
+  │                            │                           │  Generate NEW taskId      │                           │
+  │                            │                           │  and contextId            │                           │
   │                            │                           │                           │                           │
   │                            │                           │  Build RequestContext:    │                           │
-  │                            │                           │  { task: null }           │                           │
+  │                            │                           │  { task: undefined }      │                           │
   │                            │                           │                           │                           │
   │                            │                           │  execute(requestContext, eventBus)                    │
   │                            │                           ├──────────────────────────────────────────────────────>│
   │                            │                           │                           │                           │
   │                            │                           │                           │   Access history:         │
   │                            │                           │                           │   requestContext.task?    │
-  │                            │                           │                           │   → null (no history!)    │
+  │                            │                           │                           │   → undefined, no history │
   │                            │                           │                           │                           │
   │                            │                           │                           │   Send to OpenAI:         │
   │                            │                           │                           │   [{ user: "I want pizza" }]
   │                            │                           │                           │                           │
   │                            │                           │                           │   Response: need more info│
   │                            │                           │                           │                           │
-  │                            │                           │  eventBus.publish(task)   │                           │
+  │                            │                           │  eventBus.publish(AgentEvent.task(task))              │
   │                            │                           │<──────────────────────────────────────────────────────┤
   │                            │                           │                           │                           │
-  │                            │                           │  createTask(task)         │                           │
+  │                            │                           │  save(task)               │                           │
   │                            │                           ├──────────────────────────>│                           │
   │                            │                           │                           │                           │
   │                            │                           │  Task stored with:        │                           │
   │                            │                           │  history = [userMsg]      │                           │
   │                            │                           │                           │                           │
-  │                            │                           │  eventBus.publish(statusUpdate)                       │
+  │                            │                           │  eventBus.publish(AgentEvent.statusUpdate(...))       │
   │                            │                           │<──────────────────────────────────────────────────────┤
+  │                            │                           │    state: TASK_STATE_INPUT_REQUIRED                   │
+  │                            │                           │    message: agentMsg (the question)                   │
   │                            │                           │                           │                           │
-  │                            │                           │  updateTask(statusUpdate) │                           │
+  │                            │                           │  save(task)               │                           │
   │                            │                           ├──────────────────────────>│                           │
   │                            │                           │                           │                           │
   │                            │                           │  Task updated with:       │                           │
   │                            │                           │  history = [userMsg, agentMsg]                        │
   │                            │                           │                           │                           │
-  │  Response: Task {          │                           │                           │                           │
-  │    contextId: "ctx-123",   │                           │                           │                           │
-  │    taskId: "task-abc",     │                           │                           │                           │
-  │    status: "input-required"│                           │                           │                           │
-  │  }                         │                           │                           │                           │
+  │                            │                           │  eventBus.finished()      │                           │
+  │                            │                           │<──────────────────────────────────────────────────────┤
+  │                            │                           │                           │                           │
+  │ Response: Task {           │                           │                           │                           │
+  │   id: "task-abc",          │                           │                           │                           │
+  │   contextId: "ctx-123",    │                           │                           │                           │
+  │   status: {                │                           │                           │                           │
+  │     state: INPUT_REQUIRED, │                           │                           │                           │
+  │     message: agentMsg      │                           │                           │                           │
+  │   }                        │                           │                           │                           │
+  │ }                          │                           │                           │                           │
   │<───────────────────────────┤                           │                           │                           │
   │                            │                           │                           │                           │
-  │  Store: contextId, taskId  │                           │                           │                           │
+  │ Store: contextId, taskId   │                           │                           │                           │
   │                            │                           │                           │                           │
 
 
 Turn 2: Follow-up Request
 ═════════════════════════
 
-Client                   A2AExpressApp          DefaultRequestHandler          InMemoryTaskStore          PizzaOrderExecutor
+Client                 jsonRpcHandler           DefaultRequestHandler          InMemoryTaskStore          PizzaOrderExecutor
   │                            │                           │                           │                           │
   │ "Do you have pineapple?"   │                           │                           │                           │
   │ (with contextId + taskId)  │                           │                           │                           │
   ├───────────────────────────>│                           │                           │                           │
   │                            │                           │                           │                           │
-  │                            │  Process request          │                           │                           │
+  │                            │  SendMessage (JSON-RPC)   │                           │                           │
   │                            ├──────────────────────────>│                           │                           │
   │                            │                           │                           │                           │
-  │                            │                           │  getTask("task-abc")      │                           │
+  │                            │                           │  load("task-abc")         │                           │
   │                            │                           ├──────────────────────────>│                           │
   │                            │                           │                           │                           │
   │                            │                           │  Return Task with:        │                           │
@@ -198,6 +227,10 @@ Client                   A2AExpressApp          DefaultRequestHandler          I
   │                            │                           │    agentMsg1              │                           │
   │                            │                           │  ]                        │                           │
   │                            │                           │<──────────────────────────┤                           │
+  │                            │                           │                           │                           │
+  │                            │                           │  history += userMsg2      │                           │
+  │                            │                           │  save(task)               │                           │
+  │                            │                           ├──────────────────────────>│                           │
   │                            │                           │                           │                           │
   │                            │                           │  Build RequestContext:    │                           │
   │                            │                           │  { task: { history: [...] } }                         │
@@ -221,10 +254,16 @@ Client                   A2AExpressApp          DefaultRequestHandler          I
   │                            │                           │                           │                           │
   │                            │                           │                           │   Response: Hawaiian!     │
   │                            │                           │                           │                           │
-  │                            │                           │  eventBus.publish(completionMsg)                      │
+  │                            │                           │  eventBus.publish(AgentEvent.task(requestContext.task))
   │                            │                           │<──────────────────────────────────────────────────────┤
+  │                            │                           │  (re-publish the existing task first)                 │
   │                            │                           │                           │                           │
-  │                            │                           │  updateTask(...)          │                           │
+  │                            │                           │  eventBus.publish(AgentEvent.statusUpdate(...))       │
+  │                            │                           │<──────────────────────────────────────────────────────┤
+  │                            │                           │    state: TASK_STATE_COMPLETED                        │
+  │                            │                           │    message: "Got it, ... Hawaiian pizza ..."          │
+  │                            │                           │                           │                           │
+  │                            │                           │  save(task)               │                           │
   │                            │                           ├──────────────────────────>│                           │
   │                            │                           │                           │                           │
   │                            │                           │  Task updated with:       │                           │
@@ -234,15 +273,22 @@ Client                   A2AExpressApp          DefaultRequestHandler          I
   │                            │                           │    userMsg2,              │                           │
   │                            │                           │    agentMsg2              │                           │
   │                            │                           │  ]                        │                           │
-  │                            │                           │  status: "completed"      │                           │
+  │                            │                           │  state: COMPLETED         │                           │
   │                            │                           │                           │                           │
-  │  Response: Task {          │                           │                           │                           │
-  │    status: "completed",    │                           │                           │                           │
-  │    history: [...]          │                           │                           │                           │
-  │  }                         │                           │                           │                           │
+  │                            │                           │  eventBus.finished()      │                           │
+  │                            │                           │<──────────────────────────────────────────────────────┤
+  │                            │                           │                           │                           │
+  │ Response: Task {           │                           │                           │                           │
+  │   status: {                │                           │                           │                           │
+  │     state: COMPLETED,      │                           │                           │                           │
+  │     message: agentMsg2     │                           │                           │                           │
+  │   },                       │                           │                           │                           │
+  │   history: [...]           │                           │                           │                           │
+  │ }                          │                           │                           │                           │
   │<───────────────────────────┤                           │                           │                           │
   │                            │                           │                           │                           │
-  │  Clear: contextId, taskId  │                           │                           │                           │
-  │  (conversation complete)   │                           │                           │                           │
+  │ Show task.status.message   │                           │                           │                           │
+  │ Clear: contextId, taskId   │                           │                           │                           │
+  │ (conversation complete)    │                           │                           │                           │
   │                            │                           │                           │                           │
 ```

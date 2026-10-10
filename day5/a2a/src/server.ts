@@ -1,19 +1,19 @@
 // server.ts
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
-import type { AgentCard, Message, Task, TaskStatusUpdateEvent } from "@a2a-js/sdk";
+import { type AgentCard, type Message, type Part, Role, type Task, TaskState } from "@a2a-js/sdk";
 import {
+  AgentEvent,
   type AgentExecutor,
-  RequestContext,
+  type RequestContext,
   type ExecutionEventBus,
   DefaultRequestHandler,
   InMemoryTaskStore,
 } from "@a2a-js/sdk/server";
-import { A2AExpressApp } from "@a2a-js/sdk/server/express";
+import { agentCardHandler, jsonRpcHandler, UserBuilder } from "@a2a-js/sdk/server/express";
 import dotenv from "dotenv";
 import OpenAI from "openai";
-import type { ResponseCreateParamsNonStreaming, ResponseInput } from "openai/resources/responses/responses.mjs";
-import type { ResponseInputItem } from "openai/resources/responses/responses.js";
+import type { ResponseInput } from "openai/resources/responses/responses.js";
 import z from "zod";
 import { zodTextFormat } from "openai/helpers/zod.mjs";
 dotenv.config();
@@ -21,17 +21,33 @@ dotenv.config();
 const pizzaOrderAgentCard: AgentCard = {
   name: "Pizza Order Agent",
   description: "A simple agent that orders a pizza.",
-  protocolVersion: "0.3.0",
   version: "0.1.0",
-  url: "http://localhost:4000/", // The public URL of your agent server
-  skills: [ 
-    { id: "pizza-order", name: "Pizza Order", description: "Order a pizza", tags: ["pizza-order"] }
+  // A2A v1.0: the agent lists the URLs and protocol bindings it supports
+  supportedInterfaces: [
+    { url: "http://localhost:4000/", protocolBinding: "JSONRPC", protocolVersion: "1.0", tenant: "" },
+  ],
+  provider: undefined,
+  skills: [
+    {
+      id: "pizza-order",
+      name: "Pizza Order",
+      description: "Order a pizza",
+      tags: ["pizza-order"],
+      examples: [],
+      inputModes: [],
+      outputModes: [],
+      securityRequirements: [],
+    },
   ],
   capabilities: {
     streaming: true,
+    extensions: [],
   },
-  defaultInputModes: ['text'],
-  defaultOutputModes: ['text', 'task-status'],
+  securitySchemes: {},
+  securityRequirements: [],
+  signatures: [],
+  defaultInputModes: ["text/plain"],
+  defaultOutputModes: ["text/plain"],
 };
 
 const orderedPizza = z.object({
@@ -39,6 +55,24 @@ const orderedPizza = z.object({
   question: z.string().describe('Message to send to the user to further clarify the order. Empty if not needed because the pizza is known.'),
 });
 type OrderedPizza = z.infer<typeof orderedPizza>;
+
+// A2A v1.0: parts carry their content as a oneof discriminated by `$case`
+function partsToText(parts: Part[]): string {
+  return parts.map(p => p.content?.$case === "text" ? p.content.value : JSON.stringify(p)).join('\n');
+}
+
+function agentMessage(requestContext: RequestContext, text: string): Message {
+  return {
+    messageId: uuidv4(),
+    role: Role.ROLE_AGENT,
+    parts: [{ content: { $case: "text", value: text }, mediaType: "text/plain", filename: "", metadata: undefined }],
+    taskId: requestContext.taskId,
+    contextId: requestContext.contextId,
+    metadata: undefined,
+    extensions: [],
+    referenceTaskIds: [],
+  };
+}
 
 class PizzaOrderExecutor implements AgentExecutor {
   async execute(
@@ -52,25 +86,26 @@ class PizzaOrderExecutor implements AgentExecutor {
       - Hawaiian (with pineapple)
       Find out what the user wants.
       `;
-    
+
     // Build conversation history for OpenAI
     const conversationHistory: ResponseInput = [];
-    
-    // If there's an existing task, include previous messages from the history
-    if (requestContext.task?.history) {
+
+    if (requestContext.task) {
+      // Follow-up turn: the task history already contains all previous messages
+      // AND the current user message (the request handler appends it before calling us)
       for (const msg of requestContext.task.history) {
         conversationHistory.push({
-          role: msg.role === 'user' ? 'user' : 'assistant',
-          content: msg.parts.map(p => p.kind === "text" ? p.text : JSON.stringify(p)).join('\n'),
+          role: msg.role === Role.ROLE_USER ? 'user' : 'assistant',
+          content: partsToText(msg.parts),
         });
       }
+    } else {
+      // First turn: only the current user message
+      conversationHistory.push({
+        role: 'user',
+        content: partsToText(requestContext.userMessage.parts),
+      });
     }
-    
-    // Add the current user message
-    conversationHistory.push({
-      role: 'user',
-      content: requestContext.userMessage.parts.map(p => p.kind === "text" ? p.text : JSON.stringify(p)).join('\n'),
-    });
 
     const openai = new OpenAI();
     const response = await openai.responses.create({
@@ -84,69 +119,50 @@ class PizzaOrderExecutor implements AgentExecutor {
       }
     });
 
-    const pizzaOrder = JSON.parse(response.output_text!) as OrderedPizza;
-    if (pizzaOrder.pizza === '') {
-      // Need more information - set task to input-required
-      const agentMessage: Message = {
-        kind: 'message',
-        messageId: uuidv4(),
-        role: 'agent',
-        parts: [{ kind: 'text', text: pizzaOrder.question }],
-        taskId: requestContext.taskId,
-        contextId: requestContext.contextId,
-      };
+    const pizzaOrder = JSON.parse(response.output_text) as OrderedPizza;
 
-      if (!requestContext.task) {
-        // First interaction - create initial task
-        const initialTask: Task = {
-          kind: 'task',
-          id: requestContext.taskId,
-          contextId: requestContext.contextId,
-          status: {
-            state: 'submitted',
-            timestamp: new Date().toISOString(),
-          },
-          history: [requestContext.userMessage],
-        };
-        eventBus.publish(initialTask);
-      }
+    // A2A v1.0: every execution must start with a Task or a Message event.
+    // On follow-up turns we re-publish the existing task first.
+    const task: Task | undefined = requestContext.task ?? (pizzaOrder.pizza === '' ? {
+      // First interaction and we need more information - create initial task
+      id: requestContext.taskId,
+      contextId: requestContext.contextId,
+      status: {
+        state: TaskState.TASK_STATE_SUBMITTED,
+        timestamp: new Date().toISOString(),
+        message: undefined,
+      },
+      artifacts: [],
+      history: [requestContext.userMessage],
+      metadata: undefined,
+    } : undefined);
 
-      const responseMessage: TaskStatusUpdateEvent = {
-        taskId: requestContext.taskId,
-        contextId: requestContext.contextId,
-        final: true,
-        kind: "status-update",
-        status: {
-          state: 'input-required',
-          timestamp: new Date().toISOString(),
-          message: agentMessage,
-        }
-      };
-      eventBus.publish(responseMessage);
+    if (!task) {
+      // Pizza identified in the very first message - a simple message is enough, no task needed
+      eventBus.publish(AgentEvent.message(
+        agentMessage(requestContext, `Got it, you will get your ${pizzaOrder.pizza} pizza right away!`)));
     } else {
-      // Pizza identified - complete the order
-      const responseMessage: Message = {
-        kind: "message",
-        taskId: requestContext.taskId,
-        messageId: uuidv4(),
-        role: "agent",
-        parts: [{ kind: "text", text: `Got it, you will get your ${pizzaOrder.pizza} pizza right away!` }],
-        contextId: requestContext.contextId,
-      };
-      eventBus.publish(responseMessage);
+      eventBus.publish(AgentEvent.task(task));
 
-      const finalUpdate: TaskStatusUpdateEvent = {
-        kind: "status-update",
+      // Need more information -> input-required, pizza identified -> completed
+      eventBus.publish(AgentEvent.statusUpdate({
         taskId: requestContext.taskId,
         contextId: requestContext.contextId,
-        status: { state: "completed", timestamp: new Date().toISOString() },
-        final: true,
-      };
-      eventBus.publish(finalUpdate);
+        status: pizzaOrder.pizza === '' ? {
+          state: TaskState.TASK_STATE_INPUT_REQUIRED,
+          timestamp: new Date().toISOString(),
+          message: agentMessage(requestContext, pizzaOrder.question),
+        } : {
+          state: TaskState.TASK_STATE_COMPLETED,
+          timestamp: new Date().toISOString(),
+          message: agentMessage(requestContext, `Got it, you will get your ${pizzaOrder.pizza} pizza right away!`),
+        },
+        metadata: undefined,
+      }));
     }
     eventBus.finished();
   }
-  
+
   // cancelTask is not needed for this simple, non-stateful agent.
   cancelTask = async (): Promise<void> => {};
 }
@@ -159,8 +175,9 @@ const requestHandler = new DefaultRequestHandler(
   agentExecutor
 );
 
-const appBuilder = new A2AExpressApp(requestHandler);
-const expressApp = appBuilder.setupRoutes(express());
+const expressApp = express();
+expressApp.use("/.well-known/agent-card.json", agentCardHandler({ agentCardProvider: requestHandler }));
+expressApp.use("/", jsonRpcHandler({ requestHandler, userBuilder: UserBuilder.noAuthentication }));
 
 expressApp.listen(4000, () => {
   console.log(`🚀 Server started on http://localhost:4000`);

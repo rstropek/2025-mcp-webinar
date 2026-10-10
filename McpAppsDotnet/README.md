@@ -252,5 +252,5 @@ MIME type for every view resource: `McpApps.HtmlMimeType` = `text/html;profile=m
 
 - Server: `ModelContextProtocol.AspNetCore` 2.2.0 (spec revision 2026-07-28) and
   `ModelContextProtocol.Extensions.Apps` 2.2.0, target `net10.0`.
-- UI: `@modelcontextprotocol/ext-apps` ^1.7.5; dev: `vite` ^8, `vite-plugin-singlefile`,
+- UI: `@modelcontextprotocol/ext-apps` ^2.0.3; dev: `vite` ^8, `vite-plugin-singlefile`,
   `typescript` ^7, `cross-env`.

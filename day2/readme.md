@@ -4,7 +4,7 @@
 
 This repository contains samples for an introduction to the Model Context Protocol (MCP) using TypeScript.
 
-The samples use MCP TypeScript SDK **v2** (`@modelcontextprotocol/server` and `@modelcontextprotocol/client`, both `2.0.0`). SDK v2 implements MCP spec revision **2026-07-28** ([changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)) while still serving legacy 2025-era clients (VS Code, pi-mcp-adapter in its default mode) from the very same server code. SDK docs: https://ts.sdk.modelcontextprotocol.io/v2/ (migration guide: https://ts.sdk.modelcontextprotocol.io/v2/migration/upgrade-to-v2). Sample 1 has no SDK dependency and speaks both eras of the wire protocol by hand — it is the best place to see what changed under the hood.
+The samples use MCP TypeScript SDK **v2** (`@modelcontextprotocol/server` and `@modelcontextprotocol/client`). SDK v2 implements MCP spec revision **2026-07-28** ([changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog)) while still serving legacy 2025-era clients (VS Code, pi-mcp-adapter in its default mode) from the very same server code. SDK docs: https://ts.sdk.modelcontextprotocol.io/v2/ (migration guide: https://ts.sdk.modelcontextprotocol.io/v2/migration/upgrade-to-v2). Sample 1 has no SDK dependency and speaks both eras of the wire protocol by hand — it is the best place to see what changed under the hood.
 
 Prerequisites: Node.js 22+ (the SDK itself only requires 20+) and npm.
 

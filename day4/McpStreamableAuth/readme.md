@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is the pony-password Streamable-HTTP server from day 3, protected with **OAuth 2.1**. It uses MCP TypeScript SDK **v2** (`@modelcontextprotocol/server`, `@modelcontextprotocol/express` and `@modelcontextprotocol/node`, all `2.0.0`), which implements MCP spec revision **2026-07-28** while still serving legacy 2025-era clients (VS Code and friends) from the very same server code.
+This is the pony-password Streamable-HTTP server from day 3, protected with **OAuth 2.1**. It uses MCP TypeScript SDK **v2** (`@modelcontextprotocol/server`, `@modelcontextprotocol/express` and `@modelcontextprotocol/node`), which implements MCP spec revision **2026-07-28** while still serving legacy 2025-era clients (VS Code and friends) from the very same server code.
 
 Every request to `/mcp` must carry a valid bearer token; one tool additionally requires a specific scope. [Scalekit](https://scalekit.com) is the authorization server here, but nothing in the code is Scalekit-specific beyond one file — the patterns are the ones the spec prescribes.
 

@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "othello-cli",
     "othello-game",
+    "othello-cli",
     "othello-bot"
   ],
   "scripts": {
@@ -16,6 +16,6 @@
     "ci": "biome ci ."
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.11"
+    "@biomejs/biome": "^2.5.15"
   }
 }

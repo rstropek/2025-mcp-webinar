@@ -1,6 +1,6 @@
 // client.ts
-import { A2AClient } from "@a2a-js/sdk/client";
-import { type Message, type MessageSendParams, type SendMessageSuccessResponse, type Task } from "@a2a-js/sdk";
+import { ClientFactory } from "@a2a-js/sdk/client";
+import { type Message, type Part, Role, type SendMessageRequest, TaskState, taskStateToJSON } from "@a2a-js/sdk";
 import { v4 as uuidv4 } from "uuid";
 import readline from "readline";
 
@@ -9,78 +9,72 @@ const rl = readline.promises.createInterface({
   output: process.stdout,
 });
 
+// A2A v1.0: parts carry their content as a oneof discriminated by `$case`
+function partsToText(parts: Part[] | undefined): string {
+  const content = parts?.[0]?.content;
+  return content?.$case === "text" ? content.value : "No content";
+}
+
 async function run() {
-  // Create a client pointing to the agent's Agent Card URL.
-  const client = await A2AClient.fromCardUrl("http://localhost:4000/.well-known/agent-card.json");
+  // Create a client from the agent's base URL. The factory downloads the
+  // Agent Card (/.well-known/agent-card.json) and picks a matching transport.
+  const client = await new ClientFactory().createFromUrl("http://localhost:4000");
 
   // Track contextId and taskId for multi-turn conversations
-  let contextId: string | undefined = undefined;
-  let taskId: string | undefined = undefined;
+  let contextId = "";
+  let taskId = "";
 
   while (true) {
     const userInput = await rl.question("> ");
-    
+
     if (userInput.trim().toLowerCase() === 'exit') {
       console.log("Goodbye!");
       break;
     }
 
-    // Build the message params with the user input
-    const sendParams: MessageSendParams = {
+    // Build the message request with the user input
+    const sendParams: SendMessageRequest = {
+      tenant: "",
       message: {
         messageId: uuidv4(),
-        role: "user",
-        parts: [{ kind: "text", text: userInput }],
-        kind: "message",
-        ...(contextId && { contextId }), // Include contextId if we have one
-        ...(taskId && { taskId }), // Include taskId if we have one
+        role: Role.ROLE_USER,
+        parts: [{ content: { $case: "text", value: userInput }, mediaType: "text/plain", filename: "", metadata: undefined }],
+        contextId, // Empty if we start a new conversation
+        taskId, // Empty if there is no task yet
+        metadata: undefined,
+        extensions: [],
+        referenceTaskIds: [],
       },
+      configuration: undefined,
+      metadata: undefined,
     };
 
-    const response = await client.sendMessage(sendParams);
-
-    if ("error" in response) {
-      console.error("Error:", response.error.message);
-    } else {
-      const result = (response as SendMessageSuccessResponse).result;
+    try {
+      const result = await client.sendMessage(sendParams);
 
       // Check if the agent's response is a Task or a direct Message.
-      if (result.kind === "task") {
-        const task = result as Task;
-        
+      if ("status" in result) {
+        const task = result;
+
         // Store contextId and taskId for the next turn
         contextId = task.contextId;
         taskId = task.id;
-        
-        console.log(`\n[Task ${task.status.state}]`);
 
-        if (task.status.state === 'input-required' && task.status.message) {
-          const message = task.status.message as Message;
-          const agentText = message.parts[0]?.kind === 'text' ? message.parts[0]?.text : 'No content';
-          console.log(`Agent: ${agentText}\n`);
-        } else if (task.status.state === 'completed') {
-          // Look for the last agent message in history
-          if (task.history && task.history.length > 0) {
-            const lastMessage = task.history[task.history.length - 1];
-            if (lastMessage && lastMessage.role === 'agent' && lastMessage.parts[0]?.kind === 'text') {
-              console.log(`Agent: ${lastMessage.parts[0].text}\n`);
-            }
-          }
+        console.log(`\n[Task ${taskStateToJSON(task.status?.state ?? TaskState.TASK_STATE_UNSPECIFIED)}]`);
+        console.log(`Agent: ${partsToText(task.status?.message?.parts)}\n`);
+
+        if (task.status?.state === TaskState.TASK_STATE_COMPLETED) {
           console.log("Task completed! Starting fresh conversation.\n");
           // Reset context for new conversation
-          contextId = undefined;
-          taskId = undefined;
+          contextId = "";
+          taskId = "";
         }
       } else {
         const message = result as Message;
-        
-        // Store contextId and taskId from the message
-        if (message.contextId) contextId = message.contextId;
-        if (message.taskId) taskId = message.taskId;
-        
-        const agentText = message.parts[0]?.kind === 'text' ? message.parts[0]?.text : 'No content';
-        console.log(`Agent: ${agentText}\n`);
+        console.log(`Agent: ${partsToText(message.parts)}\n`);
       }
+    } catch (error) {
+      console.error("Error:", error instanceof Error ? error.message : error);
     }
   }
 }

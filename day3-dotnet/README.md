@@ -353,10 +353,10 @@ The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) can be po
 
 ```bash
 dotnet run --project McpStreamableServer
-npx @modelcontextprotocol/inspector@latest
+npx @modelcontextprotocol/inspector@latest --protocol-era modern http://localhost:5186/mcp
 ```
 
-Then connect to `http://localhost:5186/mcp` with transport type "Streamable HTTP".
+Then click *Connect*. `--protocol-era modern` makes the Inspector speak 2026-07-28, so calling `winter_password_with_custom_words` shows the MRTR flow: the first `tools/call` returns `input_required`, the Inspector shows an *Elicitation Request* form, and *Submit* retries the call with your answer. Without the flag the Inspector uses the legacy `initialize` handshake. The question still appears, because `StatefulForInitializeClients` gives legacy clients a session and the SDK pushes a classic `elicitation/create` instead.
 
 ## Dependencies
 
@@ -364,7 +364,7 @@ Then connect to `http://localhost:5186/mcp` with transport type "Streamable HTTP
 - **ModelContextProtocol.AspNetCore 2.2.0** - the MCP C# SDK for ASP.NET Core (spec revision 2026-07-28)
 - **Microsoft.Extensions.AI 10.9.0** - AI abstractions for .NET (used by the prompt sample)
 - **WinterPasswordLib** - shared library from `day2-dotnet` for password generation
-- **.NET Aspire 13.5.3** - orchestration and observability
+- **.NET Aspire 13.6.1** - orchestration and observability
 
 ## Key Concepts Demonstrated
 
