@@ -4,10 +4,9 @@
 	"main": "index.ts",
 	"scripts": {
 		"build": "tsc && cp -r src/data dist/",
-		"start:sdk": "tsx --env-file=.env ./src/server-sdk-streamable.ts",
+		"start:sdk": "tsx --env-file-if-exists=.env ./src/server-sdk-streamable.ts",
 		"inspect:sdk": "npx @modelcontextprotocol/inspector http://localhost:3000/mcp",
 		"inspect:mcpjam": "npx @mcpjam/inspector@latest",
-		"docker:build-push": "./build/build.sh",
 		"check": "biome check --write .",
 		"lint": "biome check .",
 		"ci": "biome ci ."
@@ -21,9 +20,9 @@
 		"@modelcontextprotocol/express": "^2.0.2",
 		"@modelcontextprotocol/node": "^2.1.1",
 		"@modelcontextprotocol/server": "^2.3.1",
-		"@scalekit-sdk/node": "^2.20.0",
 		"cors": "^2.8.6",
 		"express": "^5.3.0",
+		"jose": "^6.2.12",
 		"zod": "^4.6.7"
 	},
 	"devDependencies": {

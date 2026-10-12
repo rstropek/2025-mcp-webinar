@@ -4,14 +4,14 @@
 
 This is the pony-password Streamable-HTTP server from day 3, protected with **OAuth 2.1**. It uses MCP TypeScript SDK **v2** (`@modelcontextprotocol/server`, `@modelcontextprotocol/express` and `@modelcontextprotocol/node`), which implements MCP spec revision **2026-07-28** while still serving legacy 2025-era clients (VS Code and friends) from the very same server code.
 
-Every request to `/mcp` must carry a valid bearer token; one tool additionally requires a specific scope. [Scalekit](https://scalekit.com) is the authorization server here, but nothing in the code is Scalekit-specific beyond one file — the patterns are the ones the spec prescribes.
+Every request to `/mcp` must carry a valid bearer token; one tool additionally requires a specific scope. The authorization server is a local [Keycloak](https://www.keycloak.org/) in Docker (see [`../../keycloak`](../../keycloak/readme.md)), so no cloud account is needed. Nothing in the code is Keycloak-specific: the server validates standard JWT access tokens against whatever issuer it is configured with.
 
 Reference material:
 
 - SDK authorization guide: https://ts.sdk.modelcontextprotocol.io/v2/serving/authorization
 - MCP authorization specification (2026-07-28): https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization
 
-Prerequisites: Node.js 22+ (the SDK requires 20+) and npm.
+Prerequisites: Node.js 22+ (the SDK requires 20+), npm, and Docker for Keycloak.
 
 ### What this adds on top of day 3
 
@@ -39,18 +39,30 @@ A client that knows nothing but the URL bootstraps itself from the `401`:
 
 ## Setup
 
-1. `npm install`
-2. Copy `config.env.template` to `.env` and fill in the values from your Scalekit workspace.
-3. `npm run start:sdk`
+1. Start Keycloak (from the root of the repository; see [`../../keycloak/readme.md`](../../keycloak/readme.md)):
 
-### Scalekit configuration
+   ```bash
+   cd keycloak
+   docker compose up -d --wait
+   ```
 
-In the Scalekit dashboard, under **MCP Servers**:
+2. Install and start the server:
 
-- **Resource identifier** — the audience of the tokens, and the value of `MCP_RESOURCE_ID`. For the deployed server that is `https://ponypwd.mcp.rstropek.com/mcp`. Locally the server ignores `MCP_RESOURCE_ID` and uses `http://localhost:3000/mcp` instead, so that tokens minted for a local run validate (see `NODE_ENV` below).
-- **Permissions** — define the custom permission `ponypwd:generate` and grant it to the role/user you test with. It is the only scope this server understands, and it is what `scopes_supported` advertises.
-- **Client ID Metadata Document (CIMD)** — a toggle per MCP server. Switch it on to let clients identify themselves by URL instead of registering.
-- **Metadata JSON** — the dashboard shows the RFC 9728 document it expects at the resource. It is exactly what `GET /.well-known/oauth-protected-resource/mcp` returns here; the route is written by hand in `src/lib/streamable-http.ts` so every field is visible in the sample.
+   ```bash
+   npm install
+   npm run start:sdk
+   ```
+
+No configuration is needed: the defaults match the local Keycloak (issuer `http://localhost:8080/realms/mcp-webinar`, resource `http://localhost:3000/mcp`, scope `ponypwd:generate`). To override them, copy `config.env.template` to `.env`; `start:sdk` loads it if it exists.
+
+### Keycloak configuration
+
+The realm `mcp-webinar` contains everything this server relies on (details in [`../../keycloak/readme.md`](../../keycloak/readme.md)):
+
+- **The MCP server as a resource.** A client with the attribute `resource_url` = `http://localhost:3000/mcp`. With Keycloak's `resource-indicators` feature, a token requested with `resource=http://localhost:3000/mcp` gets exactly that `aud`; an unknown `resource` is refused with `invalid_target`.
+- **The scope `ponypwd:generate`.** Optional: a token carries it only when the client asks for it. It is the only scope this server understands, and it is what `scopes_supported` advertises.
+- **CIMD client policies** for MCPJam, VS Code and Claude Code, a pre-registered client for the MCP Inspector, and a `client_credentials` client for `curl`.
+- **A demo user**, `demo` / `demo`.
 
 ### Client registration with CIMD (SEP-991)
 
@@ -63,28 +75,27 @@ The spec gives clients this priority order:
 3. DCR, if a `registration_endpoint` is advertised, else
 4. ask the user to supply credentials.
 
-Scalekit advertises support in its authorization server metadata:
+Keycloak advertises support in its authorization server metadata (excerpt):
 
 ```bash
-curl -s $SCALEKIT_AUTH_SERVER/.well-known/oauth-authorization-server | jq
+curl -s http://localhost:8080/realms/mcp-webinar/.well-known/oauth-authorization-server | jq
 ```
 
 ```json
 {
-  "issuer": "https://<env>.scalekit.dev/resources/res_...",
-  "authorization_endpoint": "https://<env>.scalekit.dev/resources/res_.../oauth/authorize",
-  "token_endpoint": "https://<env>.scalekit.dev/resources/res_.../oauth/token",
-  "registration_endpoint": "https://<env>.scalekit.dev/api/v1/resources/res_.../clients:register",
-  "jwks_uri": "https://<env>.scalekit.dev/keys",
+  "issuer": "http://localhost:8080/realms/mcp-webinar",
+  "authorization_endpoint": "http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/auth",
+  "token_endpoint": "http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/token",
+  "registration_endpoint": "http://localhost:8080/realms/mcp-webinar/clients-registrations/openid-connect",
+  "jwks_uri": "http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/certs",
   "client_id_metadata_document_supported": true,
-  "code_challenge_methods_supported": ["S256"],
-  "grant_types_supported": ["authorization_code", "client_credentials", "refresh_token"],
-  "scopes_supported": ["ponypwd:generate"],
-  "response_types_supported": ["code"]
+  "code_challenge_methods_supported": ["plain", "S256"],
+  "authorization_response_iss_parameter_supported": true,
+  "scopes_supported": ["openid", "ponypwd:generate", "offline_access", "basic"]
 }
 ```
 
-`client_id_metadata_document_supported: true` is the CIMD flag; `registration_endpoint` shows that DCR remains available as the fallback for clients that do not speak CIMD yet.
+`client_id_metadata_document_supported: true` is the CIMD flag. Keycloak always lists a `registration_endpoint`, but anonymous DCR is not set up in this realm.
 
 Note that **the resource server contains no CIMD-specific code**. Client identification is entirely a matter between the client and the authorization server; all this server ever sees is a signed token.
 
@@ -111,9 +122,9 @@ npm run ci      # CI mode, fails on any finding
 | --- | --- |
 | `src/server-sdk-streamable.ts` | `buildServer()` factory with all registrations, `createMcpHandler`, `toNodeHandler`, `SIGINT` shutdown |
 | `src/lib/streamable-http.ts` | Express harness: CORS, the public metadata and health routes, `requireBearerAuth`, the single `/mcp` route |
-| `src/lib/scalekit-verifier.ts` | `OAuthTokenVerifier` — validates the token via Scalekit and maps its claims to `AuthInfo` |
+| `src/lib/token-verifier.ts` | `OAuthTokenVerifier` — validates the JWT with `jose` against the issuer's signing keys and maps its claims to `AuthInfo` |
 | `src/lib/scopes.ts` | `checkScopes(authInfo, ...required)` — the per-tool authorization check |
-| `src/lib/scalekit-config.ts` | Environment variables, the resolved resource id, the Scalekit client |
+| `src/lib/auth-config.ts` | Issuer, resource id and scopes (defaults for the local Keycloak, overridable via environment variables) |
 | `src/lib/password.ts`, `src/lib/ponies.ts` | The pony-password logic (no MCP, no OAuth) |
 
 How the caller reaches a tool handler:
@@ -121,11 +132,13 @@ How the caller reaches a tool handler:
 ```
 Authorization header
   → requireBearerAuth (@modelcontextprotocol/express)
-      → scalekitVerifier.verifyAccessToken(token) → AuthInfo
+      → tokenVerifier.verifyAccessToken(token) → AuthInfo
   → req.auth
   → toNodeHandler (@modelcontextprotocol/node)
   → ctx.http.authInfo   ← what a tool handler reads
 ```
+
+The verifier finds the issuer's signing keys the standard way: it reads `jwks_uri` from `<issuer>/.well-known/openid-configuration` on the first request, and `jose`'s `createRemoteJWKSet` caches the keys. `jwtVerify` then checks signature, expiry, `iss` and `aud`.
 
 `AuthInfo` is deliberately minimal (`token`, `clientId`, `scopes`, `expiresAt`, `resource`, `extra`), so the verifier parks the full claim set in `extra.claims` for `get_token_claims` to return. Two details of the contract matter:
 
@@ -137,18 +150,17 @@ Authorization header
 Two deliberate departures from a plain local MCP server:
 
 - **No `createMcpExpressApp()`.** Its DNS-rebinding protection validates `Host` and `Origin` against localhost, which is wrong for a publicly deployed server that browser-based MCP clients (MCPJam, the MCP Inspector) call from origins nobody can enumerate. It is also unnecessary here: DNS rebinding lets an attacker's page *reach* the server, but every `/mcp` request still needs a bearer token whose `aud` is bound to this resource, and rebinding yields no such token. A plain `express()` with permissive CORS is used instead — with `WWW-Authenticate` in `exposedHeaders`, without which a browser client never sees the challenge.
-- **Bind to all interfaces**, on `process.env.PORT || 3000`, because the container platform reaches the process from outside.
+- **Bind to all interfaces**, on `process.env.PORT || 3000`, as a deployed server would. That is safe here because the token, not the network, is the boundary.
 
 ## Scripts
 
 | Script | Description |
 | --- | --- |
-| `start:sdk` | Run the server from the TypeScript sources (`tsx --env-file=.env`), port 3000 |
+| `start:sdk` | Run the server from the TypeScript sources (`tsx`, loads `.env` if it exists), port 3000 |
 | `inspect:sdk` | MCP Inspector against `http://localhost:3000/mcp` |
 | `inspect:mcpjam` | MCPJam Inspector (local, `http://127.0.0.1:6274`) — see *Testing with MCPJam* |
 | `build` | `tsc` + copy `src/data` into `dist/` |
 | `check` / `lint` / `ci` | Biome with autofix / report only / CI mode |
-| `docker:build-push` | Build a multi-arch image and roll it out (see `build/build.sh`) |
 
 ## Testing
 
@@ -193,7 +205,7 @@ curl -s http://localhost:3000/.well-known/oauth-protected-resource/mcp | jq
 
 ```json
 {
-  "authorization_servers": ["https://<env>.scalekit.dev/resources/res_..."],
+  "authorization_servers": ["http://localhost:8080/realms/mcp-webinar"],
   "bearer_methods_supported": ["header"],
   "resource": "http://localhost:3000/mcp",
   "resource_documentation": "http://localhost:3000/mcp/docs",
@@ -201,7 +213,7 @@ curl -s http://localhost:3000/.well-known/oauth-protected-resource/mcp | jq
 }
 ```
 
-`/health` is public too, so a load balancer can probe it without a token:
+`/health` is public too, so a monitor can probe it without a token:
 
 ```bash
 curl -s http://localhost:3000/health | jq
@@ -210,25 +222,35 @@ curl -s http://localhost:3000/health | jq
 ```json
 {
   "status": "healthy",
-  "timestamp": "2026-09-03T10:29:48.869Z",
+  "timestamp": "2026-10-12T17:14:09.389Z",
   "serverName": "pony-sdk-streamable",
   "serverVersion": "0.1.0",
   "resourceId": "http://localhost:3000/mcp",
-  "authServer": "https://<env>.scalekit.dev/resources/res_..."
+  "authServer": "http://localhost:8080/realms/mcp-webinar"
 }
 ```
 
 ### Getting a token
 
-Interactively, an MCP client walks the authorization-code + PKCE flow described above. For scripted `curl` testing you need the access token such a client obtained. The easiest source is the **OAuth Debugger** of MCPJam (see *Testing with MCPJam* below): run the flow against `http://localhost:3000/mcp`, expand step 12 *Tokens Received*, and copy `access_token` from the response body:
+Interactively, an MCP client walks the authorization-code + PKCE flow described above (see *MCP Inspector* and *Testing with MCPJam* below). For scripted `curl` testing the realm has a confidential client `mcp-cli` that may use the `client_credentials` grant, so a token is one request away:
 
 ```bash
-export TOKEN=eyJhbGciOiJSUzI1NiIs...
+export TOKEN=$(curl -s http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/token \
+  -d grant_type=client_credentials -d client_id=mcp-cli -d client_secret=mcp-cli-secret \
+  -d scope=ponypwd:generate -d resource=http://localhost:3000/mcp | jq -r .access_token)
 ```
 
-The token is bound to this server: its `aud` claim contains `http://localhost:3000/mcp` because the client sent `resource=http://localhost:3000/mcp` in the token request (RFC 8707). A token minted for another resource — the Scalekit environment itself, or the deployed server — is rejected by `validateToken` with `401 invalid_token`, which is exactly the audience binding doing its job.
+The token is bound to this server: its `aud` claim is `http://localhost:3000/mcp`, the value of `resource` (RFC 8707). A token minted for another resource is rejected by `jwtVerify` with `401 invalid_token`, which is exactly the audience binding doing its job. Keycloak itself refuses to mint a token for a resource it doesn't know:
 
-The `client_credentials` grant advertised in `grant_types_supported` is not a shortcut here: the resource-scoped token endpoint expects an MCP client identity (a CIMD URL or a registered MCP client), not the environment's API credentials from `.env`.
+```bash
+curl -s http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/token \
+  -d grant_type=client_credentials -d client_id=mcp-cli -d client_secret=mcp-cli-secret \
+  -d resource=http://localhost:9999/mcp
+```
+
+```json
+{"error":"invalid_target","error_description":"The requested resource is invalid, missing, unknown, or malformed."}
+```
 
 ### Authenticated calls
 
@@ -287,26 +309,21 @@ curl -s -X POST http://localhost:3000/mcp -H "Authorization: Bearer $TOKEN" \
 ```json
 {
   "claims": {
-    "aud": ["http://localhost:3000/mcp", "res_..."],
-    "client_id": "https://www.mcpjam.com/.well-known/oauth/client-metadata.json",
-    "iss": "https://<env>.scalekit.dev",
-    "sub": "usr_...",
-    "oid": "org_...",
-    "resid": "res_...",
-    "roles": ["admin"],
-    "scope": "openid offline_access ponypwd:generate email profile",
-    "scopes": ["openid", "offline_access", "ponypwd:generate", "email", "profile"],
-    "sid": "ses_...",
-    "exp": 1788437220,
-    "iat": 1788433620,
-    "nbf": 1788433620,
-    "jti": "tkn_..."
+    "exp": 1791824666,
+    "iat": 1791824366,
+    "jti": "trrtcc:e473aa44-e2c6-95ac-77c3-f1ea3a30f034",
+    "iss": "http://localhost:8080/realms/mcp-webinar",
+    "aud": "http://localhost:3000/mcp",
+    "sub": "df214b01-9ea0-40f1-95be-b9b004807d0e",
+    "typ": "Bearer",
+    "azp": "mcp-cli",
+    "scope": "ponypwd:generate"
   },
   "isAuthenticated": true
 }
 ```
 
-Three claims are worth a second look: `aud` names this resource (that is what `validateToken` checked), `client_id` is the CIMD **URL** of the client (MCPJam here) rather than an opaque registered id, and `scope` carries the `ponypwd:generate` permission the user was granted in Scalekit.
+Three claims are worth a second look: `aud` names this resource (that is what `jwtVerify` checked), `azp` is the client the token was issued to, and `scope` carries the `ponypwd:generate` permission. With MCPJam (see below), `azp` is the CIMD **URL** `https://www.mcpjam.com/.well-known/oauth/client-metadata.json` rather than an opaque registered id, and `sub` is the `demo` user.
 
 ### Per-tool scope enforcement
 
@@ -323,7 +340,7 @@ curl -s -X POST http://localhost:3000/mcp -H "Authorization: Bearer $TOKEN" \
 {"result":{"content":[{"type":"text","text":"PiEPrINcESsLuNaCE82("}],"structuredContent":{"result":"PiEPrINcESsLuNaCE82(","metadata":{"length":20,"includedNumbers":true,"includedSymbols":true,"includedUppercase":true,"composition":["Pie","Princess Luna","numbers","symbol"]}},"resultType":"complete","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"pony-sdk-streamable","version":"0.1.0"}}},"jsonrpc":"2.0","id":5}
 ```
 
-With a token that does **not** carry the scope (for example a user without the `ponypwd:generate` permission in Scalekit), the request is still perfectly authenticated — and the tool refuses:
+With a token that does **not** carry the scope (request one without `-d scope=ponypwd:generate`), the request is still perfectly authenticated — and the tool refuses:
 
 ```json
 {"result":{"content":[{"type":"text","text":"Missing required OAuth scope(s): ponypwd:generate"}],"isError":true,"resultType":"complete","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"pony-sdk-streamable","version":"0.1.0"}}},"jsonrpc":"2.0","id":5}
@@ -350,12 +367,23 @@ data: {"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{"listCh
 
 ### MCP Inspector
 
+The Inspector uses the pre-registered public client `mcp-inspector` from the Keycloak realm.
+
 ```bash
 npm run start:sdk    # in one terminal
 npm run inspect:sdk  # in another
 ```
 
-The Inspector hits the `401` on its first request, follows `resource_metadata` to discover Scalekit, and walks you through the OAuth flow before showing tools, prompts and resources.
+In the Inspector, open the server's **Settings**:
+
+- **Protocol Era**: *Modern (2026-07-28, sessionless)*. The default *Legacy* uses the 2025 `initialize` handshake.
+- **OAuth Settings → Client ID**: `mcp-inspector`. **Scopes**: `ponypwd:generate`.
+
+`inspect:sdk` starts the Inspector with an ad-hoc server, whose settings are read-only. If you can't edit them, run `npx @modelcontextprotocol/inspector` without a URL and add the server (`streamable-http`, `http://localhost:3000/mcp`) with **Add Servers → Add manually**.
+
+Switch the server on. The Inspector hits the `401`, follows `resource_metadata` to discover Keycloak, and redirects to its login page. Sign in as `demo` / `demo`. Back in the Inspector, the server shows *Connected* with *MCP 2026-07-28*, and `get_token_claims` shows `azp` `mcp-inspector` and `scope` `ponypwd:generate offline_access` (the Inspector also asks for a refresh token).
+
+If the Inspector still redirects to a different authorization server, it has cached discovery results for `http://localhost:3000/mcp` from earlier experiments in `~/.mcp-inspector/storage/oauth.json`. *Clear stored OAuth state* in the server settings does not remove that cache; stop the Inspector and delete the server's entry from that file.
 
 ## Testing with MCPJam
 
@@ -372,33 +400,21 @@ npm run inspect:mcpjam   # in another; opens http://127.0.0.1:6274
 
 - Server name, connection type `HTTP`, URL `http://localhost:3000/mcp`.
 - Authentication: `OAuth`. Under *Advanced Settings* set **Registration Strategy** to *Client ID Metadata Documents (CIMD)*. MCPJam shows the document it will identify with: `https://www.mcpjam.com/.well-known/oauth/client-metadata.json`.
-- Under *Connection overrides* set **Protocol version** to *Latest (2026-07-28)*.
 
-The first connection attempt stops with "OAuth consent is required … Click Reconnect to continue"; switching the server on redirects the browser to the Scalekit login. Sign in with a user that holds the `ponypwd:generate` permission, approve the consent screen, and the server shows *Connected* with the version `v0.1.0` it read from `serverInfo`. The log panel on the right lists the whole flow, top to bottom:
+**Add Server** redirects the browser to the Keycloak login page. Sign in as `demo` / `demo`, and the server shows *Connected* with the version `v0.1.0` it read from `serverInfo`. The log panel on the right lists the whole flow:
 
 1. *Initial MCP Request* — the unauthenticated probe, answered with the `401` and its `WWW-Authenticate` header.
 2. *Request Resource Metadata* — `/.well-known/oauth-protected-resource/mcp`. The step is flagged *Resource identifier mismatch* because `http://localhost:3000/mcp` is not `https`, which RFC 9728 requires; a local-development artefact only.
-3. *Request Authorization Server Metadata* — Scalekit's `oauth-authorization-server` document, and MCPJam derives *CIMD support* from `client_id_metadata_document_supported`.
-4. *Authorization Server Fetches CIMD* and *Client Credentials Received* — the `Client ID` is the metadata URL. There is no registration call, and no secret.
+3. *Request Authorization Server Metadata* — Keycloak's metadata document, and MCPJam derives *CIMD support* from `client_id_metadata_document_supported`.
+4. *Authorization Server Fetches CIMD* and *Client Credentials Received* — the `Client ID` is the metadata URL. There is no registration call, and no secret. Keycloak accepts it because the realm's `cimd-mcpjam` client policy trusts `www.mcpjam.com`.
 5. *Generate PKCE Parameters*, *Authorization Request Ready*, *Authorization Code Received*, *Tokens Received*, *Authenticated MCP Request*.
 
 Reconnecting later reuses the stored tokens; no second login.
 
 ### Tools
 
-**Inspect → Tools** lists the four tools. `get_token_claims` returns the claims shown in the *Testing* section above — `client_id` is the CIMD URL, `scope` contains `ponypwd:generate` — and `pony_password_advanced` therefore succeeds. Every call is a fresh HTTP request that carries the `Authorization` header again; the server keeps no state between them.
+**Inspect → Tools** lists the four tools. `get_token_claims` returns claims like the ones in the *Testing* section above, except that `azp` is the CIMD URL and `sub` is the `demo` user. `scope` contains `ponypwd:generate` (MCPJam requests the scopes from `scopes_supported`), so `pony_password_advanced` succeeds. Every call is a fresh HTTP request that carries the `Authorization` header again; the server keeps no state between them.
 
 ### OAuth Debugger
 
-**Verify → OAuth Debugger** is preconfigured with the server URL, protocol `2026-07-28` and *CIMD (URL-based)*. *Continue* advances one step at a time; each step has a *Guide* explanation, the raw HTTP exchange, and a *Show in diagram* link into the sequence diagram between client, MCP server and authorization server. Step 7 is the authorization server fetching the client metadata document, step 11 the token request with `code_verifier` and `resource=http://localhost:3000/mcp`, and step 12 *Tokens Received* expands to the raw token response — `access_token`, `refresh_token`, `id_token`, `expires_in` — which is where the `$TOKEN` for the `curl` examples comes from.
-
-## Docker and Azure
-
-```bash
-npm run docker:build-push          # patch release
-npm run docker:build-push minor    # or major/minor
-```
-
-`build/build.sh` bumps the package version, builds a multi-arch (amd64 + arm64) image from the `node:24-alpine` based `Dockerfile`, pushes it, and points the Azure App Service at the new tag.
-
-The container gets its configuration from the App Service application settings, not from a `.env` file — there is no `--env-file` in the image's `CMD`. `NODE_ENV=production` is set in the `Dockerfile`, which is what switches the resource identifier from the local `http://localhost:3000/mcp` to `MCP_RESOURCE_ID`. The server listens on `process.env.PORT` when the platform sets one.
+**Verify → OAuth Debugger** is preconfigured with the server URL, protocol `2026-07-28` and *CIMD (URL-based)*. *Continue* advances one step at a time; each step has a *Guide* explanation, the raw HTTP exchange, and a *Show in diagram* link into the sequence diagram between client, MCP server and authorization server. Step 7 is the authorization server fetching the client metadata document, step 11 the token request with `code_verifier` and `resource=http://localhost:3000/mcp`, and step 12 *Tokens Received* expands to the raw token response with the `access_token` — a user token you can also use as `$TOKEN` for the `curl` examples.

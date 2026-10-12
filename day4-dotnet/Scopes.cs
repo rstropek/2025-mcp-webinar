@@ -17,9 +17,9 @@ public static class Scopes
     /// <summary>
     /// Claim types an OAuth 2.0 authorization server may use for granted scopes.
     /// The JWT profile (RFC 9068) prescribes <c>scope</c> with a space-separated
-    /// value; Microsoft-flavoured issuers often use <c>scp</c> instead, and some
-    /// issuers (Scalekit among them) additionally emit a repeated <c>scopes</c>
-    /// claim. Read all of them so the sample works against more than one issuer.
+    /// value (Keycloak does that); Microsoft-flavoured issuers often use
+    /// <c>scp</c> instead, and some issuers additionally emit a repeated
+    /// <c>scopes</c> claim. Read all of them so the sample works against more than one issuer.
     /// </summary>
     private static readonly string[] ScopeClaimTypes = ["scope", "scp", "scopes"];
 

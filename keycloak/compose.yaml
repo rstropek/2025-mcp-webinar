@@ -1,0 +1,37 @@
+# Local OAuth 2.1 authorization server for the day 4 samples
+# (day4/McpStreamableAuth and day4-dotnet).
+#
+#   docker compose up -d --wait     # start, imports the realm on first start
+#   docker compose down             # stop, keeps the data volume
+#   docker compose down -v          # stop and reset (re-imports the realm next time)
+#
+# Demo setup only: plain HTTP on loopback, demo passwords, embedded H2 database.
+name: mcp-webinar-keycloak
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.0
+    # `cimd` (Client ID Metadata Documents) and `resource-indicators` (RFC 8707)
+    # are still experimental in Keycloak and must be switched on explicitly.
+    command: ["start-dev", "--import-realm", "--features=cimd,resource-indicators"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Fixed public URL, so the issuer is always http://localhost:8080/realms/mcp-webinar,
+      # no matter how a request reaches the container.
+      KC_HOSTNAME: http://localhost:8080
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+      - ./mcp-webinar-realm.json:/opt/keycloak/data/import/mcp-webinar-realm.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/9000; printf \"GET /health/ready HTTP/1.0\\r\\n\\r\\n\" >&3; cat <&3 | grep -q UP'"]
+      interval: 5s
+      timeout: 5s
+      start_period: 60s
+      retries: 20
+
+volumes:
+  keycloak-data:

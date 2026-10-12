@@ -5,8 +5,8 @@ import {
 import type { NodeMcpRequestHandler } from "@modelcontextprotocol/node";
 import cors from "cors";
 import express from "express";
-import { SCALEKIT_CONFIG } from "./scalekit-config.js";
-import { scalekitVerifier } from "./scalekit-verifier.js";
+import { AUTH_CONFIG } from "./auth-config.js";
+import { tokenVerifier } from "./token-verifier.js";
 
 /**
  * Express harness around an MCP handler, protected with OAuth 2.0 bearer tokens.
@@ -16,7 +16,7 @@ import { scalekitVerifier } from "./scalekit-verifier.js";
  *   JSON-RPC traffic, `GET`/`DELETE` are answered with `405` by the handler
  *   itself (the 2026-07-28 revision has no sessions and no server-push stream).
  * - `GET  /.well-known/oauth-protected-resource[/mcp]` — RFC 9728 metadata (public).
- * - `GET  /health` — liveness probe for the container platform (public).
+ * - `GET  /health` — liveness probe, e.g. for a container platform (public).
  */
 export function createStreamableHTTPServer(
 	mcp: NodeMcpRequestHandler,
@@ -26,8 +26,8 @@ export function createStreamableHTTPServer(
 ): void {
 	// A plain Express app, not `createMcpExpressApp()`: that helper's
 	// DNS-rebinding protection validates `Host` and `Origin` against localhost,
-	// which is exactly wrong here. This server is deployed publicly and is
-	// talked to by browser-based MCP clients (MCPJam, the MCP Inspector) from
+	// which is exactly wrong for a server that is meant to be deployed publicly
+	// and is talked to by browser-based MCP clients (MCPJam, the MCP Inspector) from
 	// origins we cannot enumerate. The protection it provides is also not
 	// needed: DNS rebinding lets an attacker's page *reach* the server, but
 	// every `/mcp` request still needs a bearer token whose `aud` is bound to
@@ -85,9 +85,8 @@ export function createStreamableHTTPServer(
 	 * OAuth 2.0 Protected Resource Metadata (RFC 9728) — the document a client
 	 * fetches after it has been refused, to learn *where* to get a token.
 	 *
-	 * This is the same JSON that the Scalekit dashboard shows as "Metadata
-	 * JSON" for the MCP server; it is written out by hand here so the sample
-	 * shows every field. The endpoint is public — that is the whole point.
+	 * It is written out by hand here so the sample shows every field. The
+	 * endpoint is public — that is the whole point.
 	 */
 	function handleOAuthProtectedResource(
 		_req: express.Request,
@@ -95,7 +94,7 @@ export function createStreamableHTTPServer(
 	) {
 		res.json({
 			// URLs of the auth servers that issue tokens accepted here.
-			authorization_servers: [SCALEKIT_CONFIG.authServer],
+			authorization_servers: [AUTH_CONFIG.issuer],
 
 			// Only accept tokens in the Authorization header (RFC 6750 §2.1). We
 			// reject body/query transmission because those leak into logs and
@@ -105,13 +104,13 @@ export function createStreamableHTTPServer(
 			// Unique identifier for this resource. Clients include it in the
 			// `resource` parameter at token request time so the auth server can
 			// bind the token's `aud` claim to this resource (RFC 8707).
-			resource: SCALEKIT_CONFIG.resourceId,
+			resource: AUTH_CONFIG.resourceId,
 
-			resource_documentation: `${SCALEKIT_CONFIG.resourceId}/docs`,
+			resource_documentation: `${AUTH_CONFIG.resourceId}/docs`,
 
 			// Scopes this resource understands. Clients should request only what
 			// they need (least privilege).
-			scopes_supported: SCALEKIT_CONFIG.supportedScopes,
+			scopes_supported: AUTH_CONFIG.supportedScopes,
 		});
 	}
 
@@ -135,8 +134,8 @@ export function createStreamableHTTPServer(
 			timestamp: new Date().toISOString(),
 			serverName,
 			serverVersion,
-			resourceId: SCALEKIT_CONFIG.resourceId,
-			authServer: SCALEKIT_CONFIG.authServer,
+			resourceId: AUTH_CONFIG.resourceId,
+			authServer: AUTH_CONFIG.issuer,
 		});
 	});
 
@@ -172,9 +171,9 @@ export function createStreamableHTTPServer(
 	 * `checkScopes` and the `pony_password_advanced` tool.
 	 */
 	const auth = requireBearerAuth({
-		verifier: scalekitVerifier,
+		verifier: tokenVerifier,
 		resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(
-			new URL(SCALEKIT_CONFIG.resourceId),
+			new URL(AUTH_CONFIG.resourceId),
 		),
 	});
 
@@ -183,9 +182,9 @@ export function createStreamableHTTPServer(
 	// from the stream a second time.
 	app.all("/mcp", auth, (req, res) => void mcp(req, res, req.body));
 
-	// Bind to all interfaces: in the container the platform reaches the process
-	// from outside, and unlike an unauthenticated local server this endpoint is
-	// safe to expose — no token, no access.
+	// Bind to all interfaces, as a deployed server would: unlike an
+	// unauthenticated local server this endpoint is safe to expose — no token,
+	// no access.
 	const PORT = process.env.PORT || port;
 	app.listen(PORT, () => {
 		console.log(

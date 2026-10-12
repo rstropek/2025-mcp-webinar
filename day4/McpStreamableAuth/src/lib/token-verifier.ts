@@ -3,13 +3,11 @@ import type {
 	OAuthTokenVerifier,
 } from "@modelcontextprotocol/server";
 import { OAuthError, OAuthErrorCode } from "@modelcontextprotocol/server";
-import { SCALEKIT_CONFIG, scalekit } from "./scalekit-config.js";
+import { createRemoteJWKSet, type JWTPayload, jwtVerify } from "jose";
+import { AUTH_CONFIG } from "./auth-config.js";
 
 /** The subset of JWT claims this resource server cares about. */
-type TokenClaims = Record<string, unknown> & {
-	sub?: string;
-	exp?: number;
-	aud?: string | string[];
+type TokenClaims = JWTPayload & {
 	scope?: string;
 	scopes?: string[];
 	client_id?: string;
@@ -17,9 +15,40 @@ type TokenClaims = Record<string, unknown> & {
 };
 
 /**
+ * The authorization server's signing keys (JWKS).
+ *
+ * The JWKS URL comes from the issuer's metadata document instead of being
+ * hard-coded, which keeps this file independent of the authorization server
+ * product. It is fetched on the first token, not at startup, so the MCP server
+ * can start before Keycloak is up. `createRemoteJWKSet` caches the keys and
+ * refetches them when a token names a key id it doesn't know (key rotation).
+ */
+let jwks: Promise<ReturnType<typeof createRemoteJWKSet>> | undefined;
+
+function getJwks() {
+	jwks ??= (async () => {
+		const response = await fetch(
+			`${AUTH_CONFIG.issuer}/.well-known/openid-configuration`,
+		);
+		if (!response.ok) {
+			throw new Error(
+				`Fetching the metadata of ${AUTH_CONFIG.issuer} failed: HTTP ${response.status}`,
+			);
+		}
+		const { jwks_uri } = (await response.json()) as { jwks_uri: string };
+		return createRemoteJWKSet(new URL(jwks_uri));
+	})().catch((err) => {
+		// Don't cache a failure (e.g. Keycloak not started yet); retry next time.
+		jwks = undefined;
+		throw err;
+	});
+	return jwks;
+}
+
+/**
  * Reads the granted scopes off the token.
  *
- * Scalekit (like most issuers) emits the standard `scope` claim: a single
+ * Keycloak (like most issuers) emits the standard `scope` claim: a single
  * space-separated string (RFC 6749 §3.3). Some issuers also/instead emit
  * `scopes` as an array — we accept either.
  */
@@ -42,7 +71,7 @@ function readResource(claims: TokenClaims): URL | undefined {
 	const audiences =
 		typeof claims.aud === "string" ? [claims.aud] : (claims.aud ?? []);
 	const match =
-		audiences.find((a) => a === SCALEKIT_CONFIG.resourceId) ?? audiences[0];
+		audiences.find((a) => a === AUTH_CONFIG.resourceId) ?? audiences[0];
 	if (!match) return undefined;
 	try {
 		return new URL(match);
@@ -54,7 +83,7 @@ function readResource(claims: TokenClaims): URL | undefined {
 }
 
 /**
- * OAuth 2.0 Resource Server token verification, backed by Scalekit.
+ * OAuth 2.0 Resource Server token verification for JWT access tokens.
  *
  * `requireBearerAuth` (from `@modelcontextprotocol/express`) pulls the token
  * out of the `Authorization` header and hands it to `verifyAccessToken`. What
@@ -71,23 +100,28 @@ function readResource(claims: TokenClaims): URL | undefined {
  * - Populate `expiresAt`. Bearer verification rejects a token without an
  *   expiry outright, so a missing `exp` claim would fail every request.
  */
-export const scalekitVerifier: OAuthTokenVerifier = {
+export const tokenVerifier: OAuthTokenVerifier = {
 	async verifyAccessToken(token: string): Promise<AuthInfo> {
+		// Failing to reach the authorization server is our problem, not the
+		// client's, so it stays an ordinary error (-> 500).
+		const keys = await getJwks();
+
 		let claims: TokenClaims;
 		try {
-			// Validates signature, issuer, expiry and — crucially — that the
+			// Validates signature, expiry, issuer and — crucially — that the
 			// token's `aud` names this MCP server. A token minted for another
 			// resource is rejected here, which is what stops a token stolen
 			// from one MCP server being replayed against another.
 			//
-			// We deliberately do NOT pass `requiredScopes`: different tools
-			// need different scopes, so gating them all here would either lock
-			// out tools that need none or force every caller to hold the union
-			// of all scopes. Scope enforcement lives in the tool handlers (see
+			// We deliberately do NOT check scopes here: different tools need
+			// different scopes, so gating them all here would either lock out
+			// tools that need none or force every caller to hold the union of
+			// all scopes. Scope enforcement lives in the tool handlers (see
 			// `checkScopes` in `scopes.ts`).
-			claims = await scalekit.validateToken<TokenClaims>(token, {
-				audience: [SCALEKIT_CONFIG.resourceId],
-			});
+			({ payload: claims } = await jwtVerify<TokenClaims>(token, keys, {
+				issuer: AUTH_CONFIG.issuer,
+				audience: AUTH_CONFIG.resourceId,
+			}));
 		} catch (err) {
 			const reason = err instanceof Error ? err.message : String(err);
 			throw new OAuthError(
@@ -105,10 +139,9 @@ export const scalekitVerifier: OAuthTokenVerifier = {
 
 		return {
 			token,
-			// Which client the token was issued to. Scalekit emits `client_id`
-			// for the client-credentials grant; `azp` is the OIDC spelling of
-			// the same idea, and `sub` is the last resort (for a machine token
-			// the subject *is* the client).
+			// Which client the token was issued to. Keycloak emits `azp`, the
+			// OIDC spelling; other issuers use `client_id` (RFC 9068). `sub` is
+			// the last resort (for a machine token the subject *is* the client).
 			clientId: claims.client_id ?? claims.azp ?? claims.sub ?? "unknown",
 			scopes: readScopes(claims),
 			expiresAt: claims.exp,

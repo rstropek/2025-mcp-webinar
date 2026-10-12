@@ -59,6 +59,11 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
 //                                   adds `WWW-Authenticate: Bearer …,
 //                                   resource_metadata="…"` and serves the RFC 9728
 //                                   document. No hand-written OnChallenge needed.
+// The authorization server. Its default in appsettings.json is the local
+// Keycloak from ../keycloak (`docker compose up -d --wait` there).
+var issuer = builder.Configuration["OAuth:Issuer"]
+    ?? throw new InvalidOperationException("OAuth:Issuer is not configured");
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -69,19 +74,18 @@ builder.Services.AddAuthentication(options =>
     // `Authority` turns on OIDC discovery: the middleware fetches
     // `<Authority>/.well-known/openid-configuration`, then the JWKS, and rotates
     // signing keys on its own.
-    options.Authority = builder.Configuration["Scalekit:Issuer"]
-        ?? throw new InvalidOperationException("Scalekit:Issuer is not configured");
+    options.Authority = issuer;
 
     // Local development runs over plain HTTP; production must not.
     options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
 
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidIssuer = builder.Configuration["Scalekit:Issuer"],
+        ValidIssuer = issuer,
 
         // RFC 8707 audience binding: the token must have been issued *for this
-        // server*. A token stolen from another MCP server — or minted for the
-        // Scalekit environment itself — fails right here. This is the single
+        // server*. A token stolen from another MCP server — or minted for any
+        // other client of the authorization server — fails right here. This is the single
         // most important line of the whole file.
         ValidAudience = resourceId,
 
@@ -98,12 +102,14 @@ builder.Services.AddAuthentication(options =>
     {
         OnTokenValidated = context =>
         {
-            var name = context.Principal?.Identity?.Name ?? "unknown";
-            var subject = context.Principal?.FindFirstValue("sub") ?? "unknown";
+            // `azp` is the client the token was issued to. ASP.NET Core renames
+            // `sub` to ClaimTypes.NameIdentifier while reading the token.
+            var client = context.Principal?.FindFirstValue("azp") ?? "unknown";
+            var subject = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown";
             var scopes = context.Principal is null
                 ? ""
                 : string.Join(" ", Scopes.GrantedScopes(context.Principal));
-            Console.WriteLine($"Token validated for: {name} (sub={subject}); scopes: {scopes}");
+            Console.WriteLine($"Token validated for client {client} (sub={subject}); scopes: {scopes}");
             return Task.CompletedTask;
         },
         OnAuthenticationFailed = context =>
@@ -118,16 +124,15 @@ builder.Services.AddAuthentication(options =>
 .AddMcp(options =>
 {
     // RFC 9728 Protected Resource Metadata — the document a refused client
-    // fetches to learn *where* to get a token. This is the same JSON the
-    // Scalekit dashboard shows as "Metadata JSON" for the MCP server.
+    // fetches to learn *where* to get a token.
     options.ResourceMetadata = new()
     {
         // Who we are. Clients echo this as `resource=` at token request time.
         Resource = resourceId,
 
-        // Where tokens come from. Scalekit creates one authorization server per
-        // MCP server; its URL is the "resource" URL from the dashboard.
-        AuthorizationServers = { builder.Configuration["Scalekit:EnvironmentUrl"]! },
+        // Where tokens come from. Clients fetch this server's metadata to
+        // learn the authorize and token endpoints.
+        AuthorizationServers = { issuer },
 
         // The one permission this server understands. Clients should request
         // only what they need (least privilege).
@@ -179,7 +184,7 @@ app.MapGet("/health", () => Results.Json(new
     status = "healthy",
     timestamp = DateTimeOffset.UtcNow,
     resource = resourceId,
-    authorizationServer = builder.Configuration["Scalekit:EnvironmentUrl"],
+    authorizationServer = issuer,
 })).AllowAnonymous();
 
 // One protected endpoint. `RequireAuthorization()` is what turns an

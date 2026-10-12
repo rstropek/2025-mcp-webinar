@@ -17,8 +17,6 @@
 .env* text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
-Dockerfile text eol=lf
-.dockerignore text eol=lf
 
 # Documentation
 *.md text eol=lf

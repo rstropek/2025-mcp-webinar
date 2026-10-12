@@ -1,0 +1,232 @@
+{
+  "realm": "mcp-webinar",
+  "enabled": true,
+  "displayName": "MCP webinar",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "users": [
+    {
+      "username": "demo",
+      "enabled": true,
+      "email": "demo@example.com",
+      "emailVerified": true,
+      "firstName": "Demo",
+      "lastName": "User",
+      "credentials": [{ "type": "password", "value": "demo", "temporary": false }],
+      "realmRoles": ["default-roles-mcp-webinar"]
+    },
+    {
+      "username": "service-account-mcp-cli",
+      "enabled": true,
+      "serviceAccountClientId": "mcp-cli"
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "http://localhost:3000/mcp",
+      "name": "Pony password MCP server (resource server)",
+      "description": "Represents the MCP server. Its resource_url is what the resource parameter (RFC 8707) must name.",
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "attributes": { "resource_url": "http://localhost:3000/mcp" }
+    },
+    {
+      "clientId": "mcp-inspector",
+      "name": "MCP Inspector (pre-registered public client)",
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:6274/oauth/callback", "http://127.0.0.1:6274/oauth/callback"],
+      "webOrigins": ["http://localhost:6274", "http://127.0.0.1:6274"],
+      "attributes": { "pkce.code.challenge.method": "S256" },
+      "defaultClientScopes": ["basic"],
+      "optionalClientScopes": ["ponypwd:generate", "offline_access"],
+      "protocolMappers": [
+        {
+          "name": "mcp-server-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "http://localhost:3000/mcp",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "mcp-cli",
+      "name": "Scripted access for curl (client credentials)",
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "mcp-cli-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": ["basic"],
+      "optionalClientScopes": ["ponypwd:generate"],
+      "protocolMappers": [
+        {
+          "name": "mcp-server-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "http://localhost:3000/mcp",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "basic",
+      "description": "Subject (sub) claim",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "config": { "access.token.claim": "true", "introspection.token.claim": "true" }
+        }
+      ]
+    },
+    {
+      "name": "ponypwd:generate",
+      "description": "Generate advanced pony passwords",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Generate advanced pony passwords"
+      }
+    }
+  ],
+  "defaultDefaultClientScopes": ["basic"],
+  "defaultOptionalClientScopes": ["ponypwd:generate", "offline_access"],
+  "clientProfiles": {
+    "profiles": [
+      {
+        "name": "cimd-mcpjam",
+        "description": "MCPJam: fetch its metadata document, permit its declared callback hosts",
+        "executors": [
+          {
+            "executor": "client-id-metadata-document",
+            "configuration": {
+              "cimd-allow-http-scheme": false,
+              "cimd-allow-permitted-domains": [
+                "www.mcpjam.com", "app.mcpjam.com", "staging.mcpjam.com",
+                "score.mcpjam.com", "www.score.mcpjam.com", "localhost", "127.0.0.1"
+              ],
+              "cimd-restrict-same-domain": false,
+              "cimd-required-properties": ["client_name", "redirect_uris"],
+              "cimd-resource-indicator-allow-list": ["http://localhost:3000/mcp"],
+              "only-allow-confidential-client": false
+            }
+          }
+        ]
+      },
+      {
+        "name": "cimd-vscode",
+        "description": "VS Code desktop: metadata on vscode.dev, logo on code.visualstudio.com, loopback callback",
+        "executors": [
+          {
+            "executor": "client-id-metadata-document",
+            "configuration": {
+              "cimd-allow-http-scheme": false,
+              "cimd-allow-permitted-domains": ["vscode.dev", "code.visualstudio.com", "127.0.0.1"],
+              "cimd-restrict-same-domain": false,
+              "cimd-required-properties": ["client_name", "redirect_uris"],
+              "cimd-resource-indicator-allow-list": ["http://localhost:3000/mcp"],
+              "only-allow-confidential-client": false
+            }
+          }
+        ]
+      },
+      {
+        "name": "cimd-claude",
+        "description": "Claude Code: metadata on claude.ai, loopback callback",
+        "executors": [
+          {
+            "executor": "client-id-metadata-document",
+            "configuration": {
+              "cimd-allow-http-scheme": false,
+              "cimd-allow-permitted-domains": ["claude.ai", "localhost", "127.0.0.1"],
+              "cimd-restrict-same-domain": false,
+              "cimd-required-properties": ["client_name", "redirect_uris"],
+              "cimd-resource-indicator-allow-list": ["http://localhost:3000/mcp"],
+              "only-allow-confidential-client": false,
+              "accept-public-client-with-confidential-client-only-grant": true
+            }
+          }
+        ]
+      },
+      {
+        "name": "require-pkce",
+        "executors": [
+          { "executor": "pkce-enforcer", "configuration": { "auto-configure": true } }
+        ]
+      }
+    ]
+  },
+  "clientPolicies": {
+    "policies": [
+      {
+        "name": "cimd-mcpjam",
+        "enabled": true,
+        "conditions": [
+          {
+            "condition": "client-id-uri",
+            "configuration": {
+              "client-id-uri-scheme": ["https"],
+              "client-id-uri-allow-permitted-domains": ["www.mcpjam.com"]
+            }
+          }
+        ],
+        "profiles": ["cimd-mcpjam"]
+      },
+      {
+        "name": "cimd-vscode",
+        "enabled": true,
+        "conditions": [
+          {
+            "condition": "client-id-uri",
+            "configuration": {
+              "client-id-uri-scheme": ["https"],
+              "client-id-uri-allow-permitted-domains": ["vscode.dev"]
+            }
+          }
+        ],
+        "profiles": ["cimd-vscode"]
+      },
+      {
+        "name": "cimd-claude",
+        "enabled": true,
+        "conditions": [
+          {
+            "condition": "client-id-uri",
+            "configuration": {
+              "client-id-uri-scheme": ["https"],
+              "client-id-uri-allow-permitted-domains": ["claude.ai"]
+            }
+          }
+        ],
+        "profiles": ["cimd-claude"]
+      },
+      {
+        "name": "require-pkce",
+        "enabled": true,
+        "conditions": [{ "condition": "any-client", "configuration": {} }],
+        "profiles": ["require-pkce"]
+      }
+    ]
+  }
+}
