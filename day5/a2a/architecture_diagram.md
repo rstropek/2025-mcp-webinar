@@ -22,7 +22,7 @@
 │  3. Receive result: Task | Message ("status" in result → Task)       │
 │  4. Task: store task.contextId + task.id                             │
 │  5. Display agent's reply from task.status.message                   │
-│  6. TASK_STATE_COMPLETED → reset contextId + taskId                  │
+│  6. COMPLETED/FAILED/CANCELED/REJECTED → reset IDs                   │
 └──────────────────────────────────────────────────────────────────────┘
                                   │
                                   │ JSON-RPC POST /  (method: "SendMessage")
@@ -56,7 +56,7 @@
 │  │     }                                      │                   │  │
 │  │  4. Call executor.execute()                │                   │  │
 │  │                                            │                   │  │
-│  │  AFTER executing:                          │                   │  │
+│  │  WHILE executing (runs in parallel):       │                   │  │
 │  │  5. Listen to EventBus                     │                   │  │
 │  │  6. taskStore.save(task) with new messages ┘                   │  │
 │  │  7. Return Task or Message to client                           │  │
@@ -99,7 +99,7 @@
 │  ┌────────────────────────────────────────────────────────────────┐  │
 │  │              InMemoryTaskStore (the "memory")                  │  │
 │  │                                                                │  │
-│  │  Data Structure: Map<taskId, Task>                             │  │
+│  │  Data Structure: Map<taskId, Task> (simplified)                │  │
 │  │                                                                │  │
 │  │  {                                                             │  │
 │  │    "task-abc": {                                               │  │

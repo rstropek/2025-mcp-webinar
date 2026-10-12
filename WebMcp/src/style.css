@@ -57,6 +57,11 @@ header {
   color: #92400e;
 }
 
+.badge.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);

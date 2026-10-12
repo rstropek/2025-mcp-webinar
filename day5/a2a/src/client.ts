@@ -63,8 +63,15 @@ async function run() {
         console.log(`\n[Task ${taskStateToJSON(task.status?.state ?? TaskState.TASK_STATE_UNSPECIFIED)}]`);
         console.log(`Agent: ${partsToText(task.status?.message?.parts)}\n`);
 
-        if (task.status?.state === TaskState.TASK_STATE_COMPLETED) {
-          console.log("Task completed! Starting fresh conversation.\n");
+        // A task in a terminal state cannot receive further messages
+        const terminalStates = [
+          TaskState.TASK_STATE_COMPLETED,
+          TaskState.TASK_STATE_FAILED,
+          TaskState.TASK_STATE_CANCELED,
+          TaskState.TASK_STATE_REJECTED,
+        ];
+        if (task.status && terminalStates.includes(task.status.state)) {
+          console.log("Task finished! Starting fresh conversation.\n");
           // Reset context for new conversation
           contextId = "";
           taskId = "";

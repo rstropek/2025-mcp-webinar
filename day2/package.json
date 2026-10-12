@@ -21,16 +21,16 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@mastra/core": "^1.75.0",
-    "@mastra/mcp": "^2.2.0",
+    "@mastra/core": "^1.76.0",
+    "@mastra/mcp": "^2.3.0",
     "@modelcontextprotocol/client": "^2.3.1",
     "@modelcontextprotocol/server": "^2.3.1",
     "openai": "^7.32.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
-    "@mcpjam/inspector": "3.14.1",
+    "@mcpjam/inspector": "3.15.0",
     "@modelcontextprotocol/inspector": "^2.10.1",
     "@types/node": "^26.6.5",
     "tsx": "^4.23.15",

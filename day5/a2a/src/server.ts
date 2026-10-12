@@ -13,9 +13,9 @@ import {
 import { agentCardHandler, jsonRpcHandler, UserBuilder } from "@a2a-js/sdk/server/express";
 import dotenv from "dotenv";
 import OpenAI from "openai";
-import type { ResponseInput } from "openai/resources/responses/responses.js";
+import type { Response as OpenAIResponse, ResponseInput } from "openai/resources/responses/responses";
 import z from "zod";
-import { zodTextFormat } from "openai/helpers/zod.mjs";
+import { zodTextFormat } from "openai/helpers/zod";
 dotenv.config();
 
 const pizzaOrderAgentCard: AgentCard = {
@@ -61,12 +61,13 @@ function partsToText(parts: Part[]): string {
   return parts.map(p => p.content?.$case === "text" ? p.content.value : JSON.stringify(p)).join('\n');
 }
 
-function agentMessage(requestContext: RequestContext, text: string): Message {
+// A message references a task only if a task exists (empty taskId = no task)
+function agentMessage(requestContext: RequestContext, text: string, withTask = true): Message {
   return {
     messageId: uuidv4(),
     role: Role.ROLE_AGENT,
     parts: [{ content: { $case: "text", value: text }, mediaType: "text/plain", filename: "", metadata: undefined }],
-    taskId: requestContext.taskId,
+    taskId: withTask ? requestContext.taskId : "",
     contextId: requestContext.contextId,
     metadata: undefined,
     extensions: [],
@@ -75,6 +76,9 @@ function agentMessage(requestContext: RequestContext, text: string): Message {
 }
 
 class PizzaOrderExecutor implements AgentExecutor {
+  // LLM calls in flight, by task ID, so that cancelTask can abort them
+  private readonly running = new Map<string, AbortController>();
+
   async execute(
     requestContext: RequestContext,
     eventBus: ExecutionEventBus
@@ -108,16 +112,35 @@ class PizzaOrderExecutor implements AgentExecutor {
     }
 
     const openai = new OpenAI();
-    const response = await openai.responses.create({
-      model: "gpt-5-mini",
-      instructions: systemPrompt,
-      stream: false,
-      store: false,
-      input: conversationHistory,
-      text: {
-        format: zodTextFormat(orderedPizza, 'orderedPizza'),
-      }
-    });
+    const abort = new AbortController();
+    this.running.set(requestContext.taskId, abort);
+    let response: OpenAIResponse;
+    try {
+      response = await openai.responses.create({
+        model: "gpt-5-mini",
+        instructions: systemPrompt,
+        stream: false,
+        store: false,
+        input: conversationHistory,
+        text: {
+          format: zodTextFormat(orderedPizza, 'orderedPizza'),
+        }
+      }, { signal: abort.signal });
+    } catch (error) {
+      if (!abort.signal.aborted || !requestContext.task) throw error;
+      // cancelTask aborted the LLM call: report the task as canceled
+      eventBus.publish(AgentEvent.task(requestContext.task));
+      eventBus.publish(AgentEvent.statusUpdate({
+        taskId: requestContext.taskId,
+        contextId: requestContext.contextId,
+        status: { state: TaskState.TASK_STATE_CANCELED, timestamp: new Date().toISOString(), message: undefined },
+        metadata: undefined,
+      }));
+      eventBus.finished();
+      return;
+    } finally {
+      this.running.delete(requestContext.taskId);
+    }
 
     const pizzaOrder = JSON.parse(response.output_text) as OrderedPizza;
 
@@ -140,7 +163,7 @@ class PizzaOrderExecutor implements AgentExecutor {
     if (!task) {
       // Pizza identified in the very first message - a simple message is enough, no task needed
       eventBus.publish(AgentEvent.message(
-        agentMessage(requestContext, `Got it, you will get your ${pizzaOrder.pizza} pizza right away!`)));
+        agentMessage(requestContext, `Got it, you will get your ${pizzaOrder.pizza} pizza right away!`, false)));
     } else {
       eventBus.publish(AgentEvent.task(task));
 
@@ -163,8 +186,11 @@ class PizzaOrderExecutor implements AgentExecutor {
     eventBus.finished();
   }
 
-  // cancelTask is not needed for this simple, non-stateful agent.
-  cancelTask = async (): Promise<void> => {};
+  // The request handler only calls this while execute() is still running (waiting for the LLM).
+  // A task that waits for user input (INPUT_REQUIRED) is marked as canceled by the handler itself.
+  cancelTask = async (taskId: string): Promise<void> => {
+    this.running.get(taskId)?.abort();
+  };
 }
 
 // 3. Set up and run the server.

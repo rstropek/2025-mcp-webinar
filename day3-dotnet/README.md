@@ -362,7 +362,7 @@ Then click *Connect*. `--protocol-era modern` makes the Inspector speak 2026-07-
 
 - **.NET 10.0** - the target framework for all projects
 - **ModelContextProtocol.AspNetCore 2.2.0** - the MCP C# SDK for ASP.NET Core (spec revision 2026-07-28)
-- **Microsoft.Extensions.AI 10.9.0** - AI abstractions for .NET (used by the prompt sample)
+- **Microsoft.Extensions.AI 10.10.0** - AI abstractions for .NET (used by the prompt sample)
 - **WinterPasswordLib** - shared library from `day2-dotnet` for password generation
 - **.NET Aspire 13.6.1** - orchestration and observability
 

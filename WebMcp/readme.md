@@ -24,7 +24,7 @@ WebMCP borrows MCP's tool concept (name, description, JSON Schema input, annotat
 - **Chrome**: origin trial from Chrome 149, reported to run through Chrome 156. For local development, use `chrome://flags/#enable-webmcp-testing`. See [Chrome for Developers: WebMCP](https://developer.chrome.com/docs/ai/webmcp).
 - **API location**: the API is `document.modelContext`. Older drafts and articles use `navigator.modelContext` and `provideContext()`; those are outdated.
 - WebMCP requires a **secure context** (`https://` or `localhost`) and is controlled by the `tools` Permissions Policy. It is blocked in cross-origin iframes unless the iframe has `allow="tools"`.
-- **Other browsers**: Edge is reported to have support behind a flag. Firefox and Safari haven't announced implementations.
+- **Other browsers**: no official announcements yet. Microsoft co-edits the spec, but there is no Edge documentation for WebMCP (only third-party reports of a flag). Firefox and Safari haven't announced implementations.
 
 ## What the sample shows
 
@@ -40,7 +40,7 @@ Four tools, each teaching one WebMCP concept:
 Two more pieces make the sample usable today:
 
 - **Agent simulator.** Real agents live in the browser, and most browsers don't ship one yet. The purple panel plays the agent's role. It uses `document.modelContext.getTools()` and `executeTool()`, which the spec defines for exactly that purpose.
-- **Polyfill.** [`@mcp-b/webmcp-polyfill`](https://www.npmjs.com/package/@mcp-b/webmcp-polyfill) installs the standard API (including declarative forms) when the browser has no native implementation. It leaves a native implementation untouched. The badge at the top shows which one is active.
+- **Polyfill.** [`@mcp-b/webmcp-polyfill`](https://www.npmjs.com/package/@mcp-b/webmcp-polyfill) installs the standard API (including declarative forms) when the browser has no native implementation. It leaves a native implementation untouched. The badge at the top shows which one is active. Two differences to native Chrome: the polyfill does not provide the `:tool-form-active` / `:tool-submit-active` pseudo-classes, and it fires `toolactivated` only for declarative forms, while Chrome fires it for every tool call.
 
 ## Project layout
 
@@ -54,6 +54,10 @@ WebMcp/
 │   └── style.css       # incl. the :tool-form-active / :tool-submit-active pseudo-classes
 └── dist/               # build output (gitignored)
 ```
+
+`webmcp-types` is listed as an explicit dev dependency on purpose: the polyfill pins an older version without typings for the `toolactivated` / `toolcancel` events.
+
+`npm run build` prints two `lightningcss` warnings saying that `tool-form-active` and `tool-submit-active` are not valid pseudo-classes. The minifier doesn't know them yet; the rules are kept in the output and work in Chrome.
 
 ## Install, build, run
 
@@ -76,7 +80,8 @@ Things to try in the agent simulator:
 
 - `pony_password` with `{"minLength": 24, "special": true}`: the password appears in the page and in the activity log.
 - `save_password` with `{"label": "Netflix", "password": "RarityDashSpike"}`: the form gets filled and the call waits. Click **Save**, and the simulator receives `{"saved":"Netflix"}`.
-- `list_vault_entries`, then `clear_vault`. The page asks you for confirmation, and if you decline, the tool call fails.
+- `pony_password` with `{"minLength": 1000000000}`: the browser does **not** validate tool input against `inputSchema`, so the page clamps the value to 64 itself.
+- `list_vault_entries`, then `clear_vault`. The page asks you for confirmation, and if you decline, the tool returns `{"cleared":false,"reason":"…"}`. It deliberately does not throw: the browser replaces error messages with a generic *Tool execution failed*, so the agent would never learn that the user said no.
 
 ## Try it with a real browser agent (Chrome)
 
@@ -130,7 +135,7 @@ PORT=3100
 - Comments must be on their own line. Don't put a comment after a value.
 - `MODEL` is written as `provider:model`. The provider prefix (`openai:`) is required.
 
-**4. Install and start the helper server** (terminal 1, keep it running):
+**4. Install and start the helper server** (terminal 1, keep it running). The extension needs **Node.js 22.18 or newer**, because it runs `.ts` files directly:
 
 ```bash
 npm install
@@ -162,8 +167,8 @@ npm run dev
 
 - Open `http://localhost:5173` in Chrome. The badge must say **Native WebMCP ✔**. If it says *polyfill*, the flag from step 1 is not active.
 - Open the extension's **side panel** from the toolbar icon, and click **Got it** the first time.
-- Try: *"Generate a 20-character pony password with special characters and save it as Netflix."* The password appears on the page and the form gets filled in. You confirm with **Save**.
-- Try: *"Clear my vault."* `clear_vault` is annotated `consequentialHint: true`, so the extension asks first (**Allow** / **Don't allow**), and then the page itself asks again.
+- Try: *"Generate a 20-character pony password with special characters and save it as Netflix."* The password appears on the page and the form gets filled in. `save_password` has no `readOnlyHint`, so the extension asks first (**Allow** / **Don't allow**, while *Sensitive action alerts* is on). Then you confirm with **Save**.
+- Try: *"Clear my vault."* `clear_vault` is annotated `consequentialHint: true`, so the extension shows a *This action may be irreversible* card (**Cancel** / **Allow**), and then the page itself asks again.
 
 So during the demo **three things run at the same time**: the helper server (terminal 1), this page (terminal 3), and Chrome with the extension. Terminal 2 is only needed for building.
 

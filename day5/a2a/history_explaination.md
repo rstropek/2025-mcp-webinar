@@ -148,7 +148,7 @@
 └─────────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────────┐
-│ SERVER: DefaultRequestHandler (AFTER your executor)                 │
+│ SERVER: DefaultRequestHandler (while your executor runs)            │
 ├─────────────────────────────────────────────────────────────────────┤
 │ The SDK processes the published events and calls:                   │
 │   taskStore.save(task)  ← for AgentEvent.task(...)                  │
@@ -318,8 +318,8 @@
 ## Key Insights
 
 ### 1. **InMemoryTaskStore is the "Memory"**
-   - It's a simple in-memory dictionary: `Map<taskId, Task>`
-   - Stores all tasks and their complete history (`load(taskId)` / `save(task)`)
+   - Conceptually a simple in-memory dictionary: `Map<taskId, Task>` (the SDK keeps one per tenant and user, which is why `load` / `save` also receive a `ServerCallContext`)
+   - Stores all tasks and their complete history (`load(taskId, context)` / `save(task, context)`)
    - Persists ONLY while the server is running (lost on restart)
 
 ### 2. **DefaultRequestHandler is the "Librarian"**

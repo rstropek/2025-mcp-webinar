@@ -1,5 +1,5 @@
 import { installWebMCP } from "@mcp-b/webmcp-polyfill";
-import { buildPassword } from "./password";
+import { buildPassword, type GenOpts, MAX_LENGTH } from "./password";
 
 // ---------------------------------------------------------------------------
 // WebMCP setup
@@ -12,9 +12,9 @@ import { buildPassword } from "./password";
 const hasNativeWebMcp = "modelContext" in document;
 installWebMCP();
 
+const support = $("support");
 const modelContext = document.modelContext ?? fail("WebMCP is unavailable (insecure context or very old browser)");
 
-const support = $("support");
 support.textContent = hasNativeWebMcp ? "Native WebMCP ✔" : "WebMCP polyfill (no native support in this browser)";
 support.classList.add(hasNativeWebMcp ? "native" : "polyfill");
 
@@ -24,9 +24,19 @@ support.classList.add(hasNativeWebMcp ? "native" : "polyfill");
 
 type VaultEntry = { label: string; password: string };
 
+function isVaultEntry(e: unknown): e is VaultEntry {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    typeof (e as VaultEntry).label === "string" &&
+    typeof (e as VaultEntry).password === "string"
+  );
+}
+
 function loadVault(): VaultEntry[] {
   try {
-    return JSON.parse(localStorage.getItem("pony-vault") ?? "[]") as VaultEntry[];
+    const stored: unknown = JSON.parse(localStorage.getItem("pony-vault") ?? "[]");
+    return Array.isArray(stored) ? stored.filter(isVaultEntry) : [];
   } catch {
     return [];
   }
@@ -68,12 +78,18 @@ function showGenerated(password: string) {
   ($("save-form").querySelector("[name=password]") as HTMLInputElement).value = password;
 }
 
+// The browser does NOT validate tool input against inputSchema - an agent can
+// send {"minLength": 1e9} or {"special": "false"}. Treat tool input as untrusted.
+function toGenOpts(minLength: unknown, special: unknown): GenOpts {
+  const length = Math.trunc(Number(minLength)) || 16;
+  return { minLength: Math.min(MAX_LENGTH, Math.max(1, length)), special: special === true };
+}
+
 setVault(vault);
 
 $("generate").addEventListener("click", () => {
-  const minLength = Number(($("min-length") as HTMLInputElement).value) || 16;
-  const special = ($("special") as HTMLInputElement).checked;
-  showGenerated(buildPassword({ minLength, special }));
+  const opts = toGenOpts(($("min-length") as HTMLInputElement).value, ($("special") as HTMLInputElement).checked);
+  showGenerated(buildPassword(opts));
   log("👤 User generated a password");
 });
 
@@ -102,10 +118,11 @@ await modelContext.registerTool({
     },
   },
   annotations: { readOnlyHint: true },
-  execute: ({ minLength = 16, special = false }) => {
-    const password = buildPassword({ minLength, special });
+  execute: ({ minLength, special }) => {
+    const opts = toGenOpts(minLength, special);
+    const password = buildPassword(opts);
     showGenerated(password);
-    log(`🤖 Agent called pony_password(minLength=${minLength}, special=${special})`);
+    log(`🤖 Agent called pony_password(minLength=${opts.minLength}, special=${opts.special})`);
     // Any JSON-serializable value can be returned; the browser hands it to the agent as JSON.
     return { password };
   },
@@ -134,7 +151,10 @@ await modelContext.registerTool({
     // Human in the loop: the page itself can ask the user before doing something destructive.
     if (!confirm(`An AI agent wants to delete ${vault.length} vault entries. Allow?`)) {
       log("👤 User declined clear_vault");
-      throw new Error("The user declined to clear the vault.");
+      // Return the refusal as a result instead of throwing: the browser replaces
+      // error messages with a generic "Tool execution failed", so the agent would
+      // never learn that the user said no.
+      return { cleared: false, reason: "The user declined to clear the vault." };
     }
     setVault([]);
     return { cleared: true };
@@ -152,20 +172,25 @@ saveForm.addEventListener("submit", (e: SubmitEvent) => {
   const data = new FormData(saveForm);
   const entry = { label: String(data.get("label")), password: String(data.get("password")) };
   setVault([...vault, entry]);
-  saveForm.reset();
 
   if (e.agentInvoked) {
     // The submit was triggered by an agent's tool call: send the tool result back.
     log(`🤖 Agent saved "${entry.label}" (submitted via save_password)`);
-    e.respondWith?.(Promise.resolve({ saved: entry.label }));
+    const result = Promise.resolve({ saved: entry.label });
+    e.respondWith?.(result);
+    // reset() cancels a pending agent call (toolcancel), so only reset once the result is delivered.
+    void result.then(() => saveForm.reset());
   } else {
     log(`👤 User saved "${entry.label}"`);
+    saveForm.reset();
   }
 });
 
-modelContext.addEventListener("toolactivated", (e) =>
-  log(`🤖 Agent filled the form for ${e.toolName} - waiting for you to click Save`),
-);
+// Native Chrome fires toolactivated for every tool call (the polyfill only for
+// declarative forms). Imperative tools log from execute(), so only the form matters here.
+modelContext.addEventListener("toolactivated", (e) => {
+  if (e.toolName === "save_password") log("🤖 Agent filled the save_password form - waiting for you to click Save");
+});
 modelContext.addEventListener("toolcancel", (e) => log(`⛔ Tool call ${e.toolName} was canceled`));
 
 // ---------------------------------------------------------------------------
@@ -206,6 +231,8 @@ $("run-tool").addEventListener("click", async () => {
 await refreshTools();
 
 function fail(message: string): never {
+  support.textContent = message;
+  support.classList.add("error");
   throw new Error(message);
 }
 

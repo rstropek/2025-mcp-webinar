@@ -5,7 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "tsx src/app.ts"
+    "start": "tsx src/app.ts",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
@@ -18,9 +19,11 @@
   },
   "dependencies": {
     "@openai/agents": "^0.20.0",
+    "@openai/agents-core": "^0.20.0",
     "better-sqlite3": "^13.0.3",
     "chalk": "^6.0.1",
     "dotenv": "^18.0.7",
-    "openai": "^7.32.0"
+    "openai": "^7.32.0",
+    "zod": "^4.6.7"
   }
 }

@@ -1,8 +1,11 @@
 // Browser version of the pony-password logic from ../day2/src/lib.
-// Same algorithm, but the pony list is inlined because there is no file system in the browser.
+// Same algorithm, but the pony list is inlined because there is no file system in the browser,
+// and the random choices come from crypto.getRandomValues instead of Math.random.
 
 export type Pony = { first: string; last?: string };
 export type GenOpts = { minLength: number; special: boolean };
+
+export const MAX_LENGTH = 64;
 
 const PONIES: Pony[] = [
   "Pinkie Pie",
@@ -25,7 +28,7 @@ const PONIES: Pony[] = [
 });
 
 const substitutions = (s: string) => s.replace(/[oO]/g, "0").replace(/[iI]/g, "!").replace(/[eE]/g, "€").replace(/[sS]/g, "$");
-const choice = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)] as T;
+const choice = <T>(arr: T[]): T => arr[(crypto.getRandomValues(new Uint32Array(1))[0] ?? 0) % arr.length] as T;
 const MODES: Array<"full" | "first" | "last"> = ["full", "first", "last"];
 
 function renderFragment(p: Pony, mode: "full" | "first" | "last"): string {
