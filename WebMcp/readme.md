@@ -22,6 +22,7 @@ WebMCP borrows MCP's tool concept (name, description, JSON Schema input, annotat
 
 - The spec is a **Draft Community Group Report**. It is not on the W3C standards track and is still changing.
 - **Chrome**: origin trial from Chrome 149, reported to run through Chrome 156. For local development, use `chrome://flags/#enable-webmcp-testing`. See [Chrome for Developers: WebMCP](https://developer.chrome.com/docs/ai/webmcp).
+- **Chrome 154 lags the spec** in two places that matter for this sample: it fires `toolactivated` / `toolcancel` on `window` instead of `document.modelContext`, and `executeTool()` expects the input as a JSON string instead of an object. [`src/main.ts`](src/main.ts) handles both. Also, calling `reset()` on a declarative form cancels the agent's tool call even after `respondWith()`, so the sample clears the fields by hand.
 - **API location**: the API is `document.modelContext`. Older drafts and articles use `navigator.modelContext` and `provideContext()`; those are outdated.
 - WebMCP requires a **secure context** (`https://` or `localhost`) and is controlled by the `tools` Permissions Policy. It is blocked in cross-origin iframes unless the iframe has `allow="tools"`.
 - **Other browsers**: no official announcements yet. Microsoft co-edits the spec, but there is no Edge documentation for WebMCP (only third-party reports of a flag). Firefox and Safari haven't announced implementations.

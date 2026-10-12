@@ -176,22 +176,30 @@ saveForm.addEventListener("submit", (e: SubmitEvent) => {
   if (e.agentInvoked) {
     // The submit was triggered by an agent's tool call: send the tool result back.
     log(`🤖 Agent saved "${entry.label}" (submitted via save_password)`);
-    const result = Promise.resolve({ saved: entry.label });
-    e.respondWith?.(result);
-    // reset() cancels a pending agent call (toolcancel), so only reset once the result is delivered.
-    void result.then(() => saveForm.reset());
+    e.respondWith?.(Promise.resolve({ saved: entry.label }));
+    // No saveForm.reset() here: in Chrome, reset() cancels the agent's tool call even after
+    // respondWith() ("Tool execution cancelled by a form reset"). Clear the fields by hand instead.
+    for (const input of saveForm.querySelectorAll("input")) input.value = "";
   } else {
     log(`👤 User saved "${entry.label}"`);
     saveForm.reset();
   }
 });
 
+// The spec fires these events on document.modelContext (the polyfill does that).
+// Chrome 154 still fires them on window, so we listen on both.
+function onToolEvent(type: "toolactivated" | "toolcancel", listener: (toolName: string) => void) {
+  for (const target of [modelContext, window] as EventTarget[]) {
+    target.addEventListener(type, (e) => listener((e as Event & { toolName: string }).toolName));
+  }
+}
+
 // Native Chrome fires toolactivated for every tool call (the polyfill only for
 // declarative forms). Imperative tools log from execute(), so only the form matters here.
-modelContext.addEventListener("toolactivated", (e) => {
-  if (e.toolName === "save_password") log("🤖 Agent filled the save_password form - waiting for you to click Save");
+onToolEvent("toolactivated", (toolName) => {
+  if (toolName === "save_password") log("🤖 Agent filled the save_password form - waiting for you to click Save");
 });
-modelContext.addEventListener("toolcancel", (e) => log(`⛔ Tool call ${e.toolName} was canceled`));
+onToolEvent("toolcancel", (toolName) => log(`⛔ Tool call ${toolName} was canceled`));
 
 // ---------------------------------------------------------------------------
 // Agent simulator: plays the role of the browser's agent
@@ -222,11 +230,26 @@ $("run-tool").addEventListener("click", async () => {
     const args = JSON.parse(($("tool-args") as HTMLTextAreaElement).value || "{}");
     result.textContent = `Calling ${tool.name}…`;
     // executeTool resolves with the JSON-serialized tool result
-    result.textContent = await modelContext.executeTool(tool, args);
+    result.textContent = await executeTool(tool, args);
   } catch (err) {
     result.textContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
   }
 });
+
+// The spec (and the polyfill) take the tool input as an object. Chrome 154 still
+// expects a JSON string and rejects an object only after firing toolactivated.
+// So native Chrome gets the string first; a spec-compliant browser rejects a
+// string with a TypeError before running anything, and then gets the object.
+async function executeTool(tool: WebMCP.RegisteredTool, args: object): Promise<string> {
+  if (hasNativeWebMcp) {
+    try {
+      return await modelContext.executeTool(tool, JSON.stringify(args) as unknown as object);
+    } catch (err) {
+      if (!(err instanceof TypeError)) throw err;
+    }
+  }
+  return await modelContext.executeTool(tool, args);
+}
 
 await refreshTools();
 
