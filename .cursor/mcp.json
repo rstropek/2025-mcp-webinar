@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "pony-password": {
-      "type": "streamableHttp",
-      "url": "http://localhost:3001/mcp"
-    }
-  }
-}
