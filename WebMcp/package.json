@@ -16,12 +16,12 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@mcp-b/webmcp-polyfill": "^6.0.1"
+    "@mcp-b/webmcp-polyfill": "^6.2.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.15",
+    "@biomejs/biome": "^2.6.8",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4",
-    "webmcp-types": "^0.1.10"
+    "vite": "^8.3.8",
+    "webmcp-types": "^0.1.11"
   }
 }

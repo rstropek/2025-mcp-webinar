@@ -15,15 +15,15 @@ Prerequisites: Node.js 22+ (the SDK requires 20+), npm, and Docker for Keycloak.
 
 ### What this adds on top of day 3
 
-| | day 3 | day 4 |
-| --- | --- | --- |
-| Access | anyone who can reach the port | `Authorization: Bearer <token>` on every `/mcp` request (RFC 6750) |
-| Bind address | `127.0.0.1` only | all interfaces — the token, not the network, is the boundary |
-| Discovery | none | RFC 9728 Protected Resource Metadata + a `WWW-Authenticate` challenge that points at it |
-| Per-tool rules | none | `pony_password_advanced` requires the `ponypwd:generate` scope |
-| Request context | — | tools read the caller via `ctx.http?.authInfo` |
+|                 | day 3                         | day 4                                                                                   |
+| --------------- | ----------------------------- | --------------------------------------------------------------------------------------- |
+| Access          | anyone who can reach the port | `Authorization: Bearer <token>` on every `/mcp` request (RFC 6750)                      |
+| Bind address    | `127.0.0.1` only              | all interfaces — the token, not the network, is the boundary                            |
+| Discovery       | none                          | RFC 9728 Protected Resource Metadata + a `WWW-Authenticate` challenge that points at it |
+| Per-tool rules  | none                          | `pony_password_advanced` requires the `ponypwd:generate` scope                          |
+| Request context | —                             | tools read the caller via `ctx.http?.authInfo`                                          |
 
-**Authentication vs. authorization** is the lesson of the sample. Authentication ("who is calling?") happens once, in middleware, for the whole endpoint. Authorization ("may this caller do *this*?") is per tool, because different tools need different permissions — gating everything centrally would either lock out the tools that need no permission at all, or force every caller to hold the union of all scopes.
+**Authentication vs. authorization** is the lesson of the sample. Authentication ("who is calling?") happens once, in middleware, for the whole endpoint. Authorization ("may this caller do _this_?") is per tool, because different tools need different permissions — gating everything centrally would either lock out the tools that need no permission at all, or force every caller to hold the union of all scopes.
 
 ### The discovery flow
 
@@ -33,7 +33,7 @@ A client that knows nothing but the URL bootstraps itself from the `401`:
    `WWW-Authenticate: Bearer error="invalid_token", …, resource_metadata="http://localhost:3000/.well-known/oauth-protected-resource/mcp"`.
 2. The client fetches that URL and reads `authorization_servers` (RFC 9728).
 3. It fetches `<auth server>/.well-known/oauth-authorization-server` and finds the authorize, token and registration endpoints (RFC 8414).
-4. It identifies itself as a client — see *Client registration with CIMD* below.
+4. It identifies itself as a client — see _Client registration with CIMD_ below.
 5. It runs the authorization-code flow with **PKCE** (`code_challenge_method=S256`), passing `resource=http://localhost:3000/mcp` so the issued token's `aud` claim is bound to this server (RFC 8707). That binding is what stops a token stolen from one MCP server being replayed against another.
 6. It retries the original request with `Authorization: Bearer <token>`.
 
@@ -66,7 +66,7 @@ The realm `mcp-webinar` contains everything this server relies on (details in [`
 
 ### Client registration with CIMD (SEP-991)
 
-The 2026-07-28 revision **deprecates Dynamic Client Registration** (RFC 7591) in favour of **Client ID Metadata Documents**. Instead of POSTing a registration request and receiving a generated `client_id` (plus, often, a secret to store), the client's `client_id` simply *is* an HTTPS URL pointing at a JSON document that describes it — its name, its redirect URIs, and so on. The authorization server fetches that document when it first sees the `client_id`. No registration step, no shared secret, no per-server client record: one document serves every MCP server the client ever talks to.
+The 2026-07-28 revision **deprecates Dynamic Client Registration** (RFC 7591) in favour of **Client ID Metadata Documents**. Instead of POSTing a registration request and receiving a generated `client_id` (plus, often, a secret to store), the client's `client_id` simply _is_ an HTTPS URL pointing at a JSON document that describes it — its name, its redirect URIs, and so on. The authorization server fetches that document when it first sees the `client_id`. No registration step, no shared secret, no per-server client record: one document serves every MCP server the client ever talks to.
 
 The spec gives clients this priority order:
 
@@ -83,15 +83,15 @@ curl -s http://localhost:8080/realms/mcp-webinar/.well-known/oauth-authorization
 
 ```json
 {
-  "issuer": "http://localhost:8080/realms/mcp-webinar",
-  "authorization_endpoint": "http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/auth",
-  "token_endpoint": "http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/token",
-  "registration_endpoint": "http://localhost:8080/realms/mcp-webinar/clients-registrations/openid-connect",
-  "jwks_uri": "http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/certs",
-  "client_id_metadata_document_supported": true,
-  "code_challenge_methods_supported": ["plain", "S256"],
-  "authorization_response_iss_parameter_supported": true,
-  "scopes_supported": ["openid", "ponypwd:generate", "offline_access", "basic"]
+	"issuer": "http://localhost:8080/realms/mcp-webinar",
+	"authorization_endpoint": "http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/auth",
+	"token_endpoint": "http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/token",
+	"registration_endpoint": "http://localhost:8080/realms/mcp-webinar/clients-registrations/openid-connect",
+	"jwks_uri": "http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/certs",
+	"client_id_metadata_document_supported": true,
+	"code_challenge_methods_supported": ["plain", "S256"],
+	"authorization_response_iss_parameter_supported": true,
+	"scopes_supported": ["openid", "ponypwd:generate", "offline_access", "basic"]
 }
 ```
 
@@ -118,14 +118,14 @@ npm run ci      # CI mode, fails on any finding
 
 ## Architecture
 
-| File | Role |
-| --- | --- |
-| `src/server-sdk-streamable.ts` | `buildServer()` factory with all registrations, `createMcpHandler`, `toNodeHandler`, `SIGINT` shutdown |
-| `src/lib/streamable-http.ts` | Express harness: CORS, the public metadata and health routes, `requireBearerAuth`, the single `/mcp` route |
-| `src/lib/token-verifier.ts` | `OAuthTokenVerifier` — validates the JWT with `jose` against the issuer's signing keys and maps its claims to `AuthInfo` |
-| `src/lib/scopes.ts` | `checkScopes(authInfo, ...required)` — the per-tool authorization check |
-| `src/lib/auth-config.ts` | Issuer, resource id and scopes (defaults for the local Keycloak, overridable via environment variables) |
-| `src/lib/password.ts`, `src/lib/ponies.ts` | The pony-password logic (no MCP, no OAuth) |
+| File                                       | Role                                                                                                                     |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `src/server-sdk-streamable.ts`             | `buildServer()` factory with all registrations, `createMcpHandler`, `toNodeHandler`, `SIGINT` shutdown                   |
+| `src/lib/streamable-http.ts`               | Express harness: CORS, the public metadata and health routes, `requireBearerAuth`, the single `/mcp` route               |
+| `src/lib/token-verifier.ts`                | `OAuthTokenVerifier` — validates the JWT with `jose` against the issuer's signing keys and maps its claims to `AuthInfo` |
+| `src/lib/scopes.ts`                        | `checkScopes(authInfo, ...required)` — the per-tool authorization check                                                  |
+| `src/lib/auth-config.ts`                   | Issuer, resource id and scopes (defaults for the local Keycloak, overridable via environment variables)                  |
+| `src/lib/password.ts`, `src/lib/ponies.ts` | The pony-password logic (no MCP, no OAuth)                                                                               |
 
 How the caller reaches a tool handler:
 
@@ -149,18 +149,18 @@ The verifier finds the issuer's signing keys the standard way: it reads `jwks_ur
 
 Two deliberate departures from a plain local MCP server:
 
-- **No `createMcpExpressApp()`.** Its DNS-rebinding protection validates `Host` and `Origin` against localhost, which is wrong for a publicly deployed server that browser-based MCP clients (MCPJam, the MCP Inspector) call from origins nobody can enumerate. It is also unnecessary here: DNS rebinding lets an attacker's page *reach* the server, but every `/mcp` request still needs a bearer token whose `aud` is bound to this resource, and rebinding yields no such token. A plain `express()` with permissive CORS is used instead — with `WWW-Authenticate` in `exposedHeaders`, without which a browser client never sees the challenge.
+- **No `createMcpExpressApp()`.** Its DNS-rebinding protection validates `Host` and `Origin` against localhost, which is wrong for a publicly deployed server that browser-based MCP clients (MCPJam, the MCP Inspector) call from origins nobody can enumerate. It is also unnecessary here: DNS rebinding lets an attacker's page _reach_ the server, but every `/mcp` request still needs a bearer token whose `aud` is bound to this resource, and rebinding yields no such token. A plain `express()` with permissive CORS is used instead — with `WWW-Authenticate` in `exposedHeaders`, without which a browser client never sees the challenge.
 - **Bind to all interfaces**, on `process.env.PORT || 3000`, as a deployed server would. That is safe here because the token, not the network, is the boundary.
 
 ## Scripts
 
-| Script | Description |
-| --- | --- |
-| `start:sdk` | Run the server from the TypeScript sources (`tsx`, loads `.env` if it exists), port 3000 |
-| `inspect:sdk` | MCP Inspector against `http://localhost:3000/mcp` |
-| `inspect:mcpjam` | MCPJam Inspector (local, `http://127.0.0.1:6274`) — see *Testing with MCPJam* |
-| `build` | `tsc` + copy `src/data` into `dist/` |
-| `check` / `lint` / `ci` | Biome with autofix / report only / CI mode |
+| Script                  | Description                                                                              |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| `start:sdk`             | Run the server from the TypeScript sources (`tsx`, loads `.env` if it exists), port 3000 |
+| `inspect:sdk`           | MCP Inspector against `http://localhost:3000/mcp`                                        |
+| `inspect:mcpjam`        | MCPJam Inspector (local, `http://127.0.0.1:6274`) — see _Testing with MCPJam_            |
+| `build`                 | `tsc` + copy `src/data` into `dist/`                                                     |
+| `check` / `lint` / `ci` | Biome with autofix / report only / CI mode                                               |
 
 ## Testing
 
@@ -205,11 +205,11 @@ curl -s http://localhost:3000/.well-known/oauth-protected-resource/mcp | jq
 
 ```json
 {
-  "authorization_servers": ["http://localhost:8080/realms/mcp-webinar"],
-  "bearer_methods_supported": ["header"],
-  "resource": "http://localhost:3000/mcp",
-  "resource_documentation": "http://localhost:3000/mcp/docs",
-  "scopes_supported": ["ponypwd:generate"]
+	"authorization_servers": ["http://localhost:8080/realms/mcp-webinar"],
+	"bearer_methods_supported": ["header"],
+	"resource": "http://localhost:3000/mcp",
+	"resource_documentation": "http://localhost:3000/mcp/docs",
+	"scopes_supported": ["ponypwd:generate"]
 }
 ```
 
@@ -221,18 +221,18 @@ curl -s http://localhost:3000/health | jq
 
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2026-10-12T17:14:09.389Z",
-  "serverName": "pony-sdk-streamable",
-  "serverVersion": "0.1.0",
-  "resourceId": "http://localhost:3000/mcp",
-  "authServer": "http://localhost:8080/realms/mcp-webinar"
+	"status": "healthy",
+	"timestamp": "2026-10-12T17:14:09.389Z",
+	"serverName": "pony-sdk-streamable",
+	"serverVersion": "0.1.0",
+	"resourceId": "http://localhost:3000/mcp",
+	"authServer": "http://localhost:8080/realms/mcp-webinar"
 }
 ```
 
 ### Getting a token
 
-Interactively, an MCP client walks the authorization-code + PKCE flow described above (see *MCP Inspector* and *Testing with MCPJam* below). For scripted `curl` testing the realm has a confidential client `mcp-cli` that may use the `client_credentials` grant, so a token is one request away:
+Interactively, an MCP client walks the authorization-code + PKCE flow described above (see _MCP Inspector_ and _Testing with MCPJam_ below). For scripted `curl` testing the realm has a confidential client `mcp-cli` that may use the `client_credentials` grant, so a token is one request away:
 
 ```bash
 export TOKEN=$(curl -s http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/token \
@@ -249,7 +249,10 @@ curl -s http://localhost:8080/realms/mcp-webinar/protocol/openid-connect/token \
 ```
 
 ```json
-{"error":"invalid_target","error_description":"The requested resource is invalid, missing, unknown, or malformed."}
+{
+	"error": "invalid_target",
+	"error_description": "The requested resource is invalid, missing, unknown, or malformed."
+}
 ```
 
 ### Authenticated calls
@@ -264,7 +267,28 @@ curl -s -X POST http://localhost:3000/mcp -H "Authorization: Bearer $TOKEN" \
 ```
 
 ```json
-{"result":{"supportedVersions":["2026-07-28"],"capabilities":{"tools":{"listChanged":true},"completions":{},"prompts":{"listChanged":true},"resources":{"listChanged":true}},"resultType":"complete","ttlMs":0,"cacheScope":"private","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"pony-sdk-streamable","version":"0.1.0"}}},"jsonrpc":"2.0","id":1}
+{
+	"result": {
+		"supportedVersions": ["2026-07-28"],
+		"capabilities": {
+			"tools": { "listChanged": true },
+			"completions": {},
+			"prompts": { "listChanged": true },
+			"resources": { "listChanged": true }
+		},
+		"resultType": "complete",
+		"ttlMs": 0,
+		"cacheScope": "private",
+		"_meta": {
+			"io.modelcontextprotocol/serverInfo": {
+				"name": "pony-sdk-streamable",
+				"version": "0.1.0"
+			}
+		}
+	},
+	"jsonrpc": "2.0",
+	"id": 1
+}
 ```
 
 The SDK enforces the full `_meta` envelope, so `io.modelcontextprotocol/clientCapabilities` is mandatory even here — omitting it is answered with `-32602` and a precise complaint.
@@ -280,7 +304,12 @@ curl -s -X POST http://localhost:3000/mcp -H "Authorization: Bearer $TOKEN" \
 ```
 
 ```json
-["pony_password", "pony_password_batch", "pony_password_advanced", "get_token_claims"]
+[
+	"pony_password",
+	"pony_password_batch",
+	"pony_password_advanced",
+	"get_token_claims"
+]
 ```
 
 A plain `tools/call` (note `Mcp-Name`, which names the tool for intermediaries):
@@ -293,7 +322,21 @@ curl -s -X POST http://localhost:3000/mcp -H "Authorization: Bearer $TOKEN" \
 ```
 
 ```json
-{"result":{"content":[{"type":"text","text":"Flutt€r$hyAppl€jackDa$hAppl€jack"}],"structuredContent":{"result":"Flutt€r$hyAppl€jackDa$hAppl€jack"},"resultType":"complete","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"pony-sdk-streamable","version":"0.1.0"}}},"jsonrpc":"2.0","id":3}
+{
+	"result": {
+		"content": [{ "type": "text", "text": "Flutt€r$hyAppl€jackDa$hAppl€jack" }],
+		"structuredContent": { "result": "Flutt€r$hyAppl€jackDa$hAppl€jack" },
+		"resultType": "complete",
+		"_meta": {
+			"io.modelcontextprotocol/serverInfo": {
+				"name": "pony-sdk-streamable",
+				"version": "0.1.0"
+			}
+		}
+	},
+	"jsonrpc": "2.0",
+	"id": 3
+}
 ```
 
 `get_token_claims` shows what the authorization server actually put into the token — including the `aud` that had to match this resource:
@@ -308,18 +351,18 @@ curl -s -X POST http://localhost:3000/mcp -H "Authorization: Bearer $TOKEN" \
 
 ```json
 {
-  "claims": {
-    "exp": 1791824666,
-    "iat": 1791824366,
-    "jti": "trrtcc:e473aa44-e2c6-95ac-77c3-f1ea3a30f034",
-    "iss": "http://localhost:8080/realms/mcp-webinar",
-    "aud": "http://localhost:3000/mcp",
-    "sub": "df214b01-9ea0-40f1-95be-b9b004807d0e",
-    "typ": "Bearer",
-    "azp": "mcp-cli",
-    "scope": "ponypwd:generate"
-  },
-  "isAuthenticated": true
+	"claims": {
+		"exp": 1791824666,
+		"iat": 1791824366,
+		"jti": "trrtcc:e473aa44-e2c6-95ac-77c3-f1ea3a30f034",
+		"iss": "http://localhost:8080/realms/mcp-webinar",
+		"aud": "http://localhost:3000/mcp",
+		"sub": "df214b01-9ea0-40f1-95be-b9b004807d0e",
+		"typ": "Bearer",
+		"azp": "mcp-cli",
+		"scope": "ponypwd:generate"
+	},
+	"isAuthenticated": true
 }
 ```
 
@@ -337,16 +380,58 @@ curl -s -X POST http://localhost:3000/mcp -H "Authorization: Bearer $TOKEN" \
 ```
 
 ```json
-{"result":{"content":[{"type":"text","text":"PiEPrINcESsLuNaCE82("}],"structuredContent":{"result":"PiEPrINcESsLuNaCE82(","metadata":{"length":20,"includedNumbers":true,"includedSymbols":true,"includedUppercase":true,"composition":["Pie","Princess Luna","numbers","symbol"]}},"resultType":"complete","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"pony-sdk-streamable","version":"0.1.0"}}},"jsonrpc":"2.0","id":5}
+{
+	"result": {
+		"content": [{ "type": "text", "text": "PiEPrINcESsLuNaCE82(" }],
+		"structuredContent": {
+			"result": "PiEPrINcESsLuNaCE82(",
+			"metadata": {
+				"length": 20,
+				"includedNumbers": true,
+				"includedSymbols": true,
+				"includedUppercase": true,
+				"composition": ["Pie", "Princess Luna", "numbers", "symbol"]
+			}
+		},
+		"resultType": "complete",
+		"_meta": {
+			"io.modelcontextprotocol/serverInfo": {
+				"name": "pony-sdk-streamable",
+				"version": "0.1.0"
+			}
+		}
+	},
+	"jsonrpc": "2.0",
+	"id": 5
+}
 ```
 
 With a token that does **not** carry the scope (request one without `-d scope=ponypwd:generate`), the request is still perfectly authenticated — and the tool refuses:
 
 ```json
-{"result":{"content":[{"type":"text","text":"Missing required OAuth scope(s): ponypwd:generate"}],"isError":true,"resultType":"complete","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"pony-sdk-streamable","version":"0.1.0"}}},"jsonrpc":"2.0","id":5}
+{
+	"result": {
+		"content": [
+			{
+				"type": "text",
+				"text": "Missing required OAuth scope(s): ponypwd:generate"
+			}
+		],
+		"isError": true,
+		"resultType": "complete",
+		"_meta": {
+			"io.modelcontextprotocol/serverInfo": {
+				"name": "pony-sdk-streamable",
+				"version": "0.1.0"
+			}
+		}
+	},
+	"jsonrpc": "2.0",
+	"id": 5
+}
 ```
 
-Note the shape: HTTP `200`, a normal JSON-RPC *result*, `isError: true`. The transport did its job; the tool is the one saying no. Compare that with the `401` a missing or invalid token gets from the middleware.
+Note the shape: HTTP `200`, a normal JSON-RPC _result_, `isError: true`. The transport did its job; the tool is the one saying no. Compare that with the `401` a missing or invalid token gets from the middleware.
 
 ### Legacy clients
 
@@ -376,14 +461,14 @@ npm run inspect:sdk  # in another
 
 In the Inspector, open the server's **Settings**:
 
-- **Protocol Era**: *Modern (2026-07-28, sessionless)*. The default *Legacy* uses the 2025 `initialize` handshake.
+- **Protocol Era**: _Modern (2026-07-28, sessionless)_. The default _Legacy_ uses the 2025 `initialize` handshake.
 - **OAuth Settings → Client ID**: `mcp-inspector`. **Scopes**: `ponypwd:generate`.
 
 `inspect:sdk` starts the Inspector with an ad-hoc server, whose settings are read-only. If you can't edit them, run `npx @modelcontextprotocol/inspector` without a URL and add the server (`streamable-http`, `http://localhost:3000/mcp`) with **Add Servers → Add manually**.
 
-Switch the server on. The Inspector hits the `401`, follows `resource_metadata` to discover Keycloak, and redirects to its login page. Sign in as `demo` / `demo`. Back in the Inspector, the server shows *Connected* with *MCP 2026-07-28*, and `get_token_claims` shows `azp` `mcp-inspector` and `scope` `ponypwd:generate offline_access` (the Inspector also asks for a refresh token).
+Switch the server on. The Inspector hits the `401`, follows `resource_metadata` to discover Keycloak, and redirects to its login page. Sign in as `demo` / `demo`. Back in the Inspector, the server shows _Connected_ with _MCP 2026-07-28_, and `get_token_claims` shows `azp` `mcp-inspector` and `scope` `ponypwd:generate offline_access` (the Inspector also asks for a refresh token).
 
-If the Inspector still redirects to a different authorization server, it has cached discovery results for `http://localhost:3000/mcp` from earlier experiments in `~/.mcp-inspector/storage/oauth.json`. *Clear stored OAuth state* in the server settings does not remove that cache; stop the Inspector and delete the server's entry from that file.
+If the Inspector still redirects to a different authorization server, it has cached discovery results for `http://localhost:3000/mcp` from earlier experiments in `~/.mcp-inspector/storage/oauth.json`. _Clear stored OAuth state_ in the server settings does not remove that cache; stop the Inspector and delete the server's entry from that file.
 
 ## Testing with MCPJam
 
@@ -399,22 +484,22 @@ npm run inspect:mcpjam   # in another; opens http://127.0.0.1:6274
 **Connect → Add Server → Add manually**, then:
 
 - Server name, connection type `HTTP`, URL `http://localhost:3000/mcp`.
-- Authentication: `OAuth`. Under *Advanced Settings* set **Registration Strategy** to *Client ID Metadata Documents (CIMD)*. MCPJam shows the document it will identify with: `https://www.mcpjam.com/.well-known/oauth/client-metadata.json`.
+- Authentication: `OAuth`. Under _Advanced Settings_ set **Registration Strategy** to _Client ID Metadata Documents (CIMD)_. MCPJam shows the document it will identify with: `https://www.mcpjam.com/.well-known/oauth/client-metadata.json`.
 
-**Add Server** redirects the browser to the Keycloak login page. Sign in as `demo` / `demo`, and the server shows *Connected* with the version `v0.1.0` it read from `serverInfo`. The log panel on the right lists the whole flow:
+**Add Server** redirects the browser to the Keycloak login page. Sign in as `demo` / `demo`, and the server shows _Connected_ with the version `v0.1.0` it read from `serverInfo`. The log panel on the right lists the whole flow:
 
-1. *Initial MCP Request* — the unauthenticated probe, answered with the `401` and its `WWW-Authenticate` header.
-2. *Request Resource Metadata* — `/.well-known/oauth-protected-resource/mcp`. The step is flagged *Resource identifier mismatch* because `http://localhost:3000/mcp` is not `https`, which RFC 9728 requires; a local-development artefact only.
-3. *Request Authorization Server Metadata* — Keycloak's metadata document, and MCPJam derives *CIMD support* from `client_id_metadata_document_supported`.
-4. *Authorization Server Fetches CIMD* and *Client Credentials Received* — the `Client ID` is the metadata URL. There is no registration call, and no secret. Keycloak accepts it because the realm's `cimd-mcpjam` client policy trusts `www.mcpjam.com`.
-5. *Generate PKCE Parameters*, *Authorization Request Ready*, *Authorization Code Received*, *Tokens Received*, *Authenticated MCP Request*.
+1. _Initial MCP Request_ — the unauthenticated probe, answered with the `401` and its `WWW-Authenticate` header.
+2. _Request Resource Metadata_ — `/.well-known/oauth-protected-resource/mcp`. The step is flagged _Resource identifier mismatch_ because `http://localhost:3000/mcp` is not `https`, which RFC 9728 requires; a local-development artefact only.
+3. _Request Authorization Server Metadata_ — Keycloak's metadata document, and MCPJam derives _CIMD support_ from `client_id_metadata_document_supported`.
+4. _Authorization Server Fetches CIMD_ and _Client Credentials Received_ — the `Client ID` is the metadata URL. There is no registration call, and no secret. Keycloak accepts it because the realm's `cimd-mcpjam` client policy trusts `www.mcpjam.com`.
+5. _Generate PKCE Parameters_, _Authorization Request Ready_, _Authorization Code Received_, _Tokens Received_, _Authenticated MCP Request_.
 
 Reconnecting later reuses the stored tokens; no second login.
 
 ### Tools
 
-**Inspect → Tools** lists the four tools. `get_token_claims` returns claims like the ones in the *Testing* section above, except that `azp` is the CIMD URL and `sub` is the `demo` user. `scope` contains `ponypwd:generate` (MCPJam requests the scopes from `scopes_supported`), so `pony_password_advanced` succeeds. Every call is a fresh HTTP request that carries the `Authorization` header again; the server keeps no state between them.
+**Inspect → Tools** lists the four tools. `get_token_claims` returns claims like the ones in the _Testing_ section above, except that `azp` is the CIMD URL and `sub` is the `demo` user. `scope` contains `ponypwd:generate` (MCPJam requests the scopes from `scopes_supported`), so `pony_password_advanced` succeeds. Every call is a fresh HTTP request that carries the `Authorization` header again; the server keeps no state between them.
 
 ### OAuth Debugger
 
-**Verify → OAuth Debugger** is preconfigured with the server URL, protocol `2026-07-28` and *CIMD (URL-based)*. *Continue* advances one step at a time; each step has a *Guide* explanation, the raw HTTP exchange, and a *Show in diagram* link into the sequence diagram between client, MCP server and authorization server. Step 7 is the authorization server fetching the client metadata document, step 11 the token request with `code_verifier` and `resource=http://localhost:3000/mcp`, and step 12 *Tokens Received* expands to the raw token response with the `access_token` — a user token you can also use as `$TOKEN` for the `curl` examples.
+**Verify → OAuth Debugger** is preconfigured with the server URL, protocol `2026-07-28` and _CIMD (URL-based)_. _Continue_ advances one step at a time; each step has a _Guide_ explanation, the raw HTTP exchange, and a _Show in diagram_ link into the sequence diagram between client, MCP server and authorization server. Step 7 is the authorization server fetching the client metadata document, step 11 the token request with `code_verifier` and `resource=http://localhost:3000/mcp`, and step 12 _Tokens Received_ expands to the raw token response with the `access_token` — a user token you can also use as `$TOKEN` for the `curl` examples.

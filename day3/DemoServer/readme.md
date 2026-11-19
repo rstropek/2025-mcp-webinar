@@ -6,11 +6,11 @@ A deliberately tiny MCP server with a single tool (`echo-tool`), used to explain
 
 Three files, one concern each:
 
-| File                | Contains                                                              |
-| ------------------- | --------------------------------------------------------------------- |
-| `src/app.ts`        | The Express wiring: routes, CORS, listening, shutdown                 |
-| `src/mcp-handler.ts`| `createMcpHandler(factory)` — the bridge between HTTP and MCP          |
-| `src/mcp-server.ts` | The `McpServer` factory with the one tool                             |
+| File                 | Contains                                                      |
+| -------------------- | ------------------------------------------------------------- |
+| `src/app.ts`         | The Express wiring: routes, CORS, listening, shutdown         |
+| `src/mcp-handler.ts` | `createMcpHandler(factory)` — the bridge between HTTP and MCP |
+| `src/mcp-server.ts`  | The `McpServer` factory with the one tool                     |
 
 ## Storyboard
 

@@ -12,15 +12,15 @@ Install the dependencies with `npm install` and compile with `npm run build`. Th
 
 Both transports carry exactly the same JSON-RPC messages. What differs is the plumbing around them — and 2026-07-28 removed a lot of that plumbing:
 
-| | stdio | Streamable HTTP (2026-07-28) |
-| --- | --- | --- |
-| Connection | one long-lived pipe per client | **one POST per JSON-RPC message** to a single endpoint (`/mcp`) |
-| Who starts the server | the client spawns it as a child process | the server runs on its own; clients just connect |
-| Response shape | one line of JSON per message | `application/json` (one object) or `text/event-stream` when the server emits notifications before the result |
-| Request routing | implicit — the pipe belongs to one client | duplicated into headers: `MCP-Protocol-Version`, `Mcp-Method`, and `Mcp-Name` on `tools/call` / `prompts/get` / `resources/read` |
-| Sessions | connection *is* the session | **removed** — no `Mcp-Session-Id`, no standalone `GET` SSE stream, no `DELETE`, no `Last-Event-ID` resumability. `GET`/`DELETE` answer `405` |
-| Asking the user something | the server pushes an `elicitation/create` request down the pipe | **Multi Round-Trip Request (MRTR)**: the tool answers `resultType: "input_required"` and the client *retries* the call with `inputResponses` |
-| Security | the client owns the process | the server MUST validate the `Origin` header and SHOULD bind to `127.0.0.1` |
+|                           | stdio                                                           | Streamable HTTP (2026-07-28)                                                                                                                 |
+| ------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connection                | one long-lived pipe per client                                  | **one POST per JSON-RPC message** to a single endpoint (`/mcp`)                                                                              |
+| Who starts the server     | the client spawns it as a child process                         | the server runs on its own; clients just connect                                                                                             |
+| Response shape            | one line of JSON per message                                    | `application/json` (one object) or `text/event-stream` when the server emits notifications before the result                                 |
+| Request routing           | implicit — the pipe belongs to one client                       | duplicated into headers: `MCP-Protocol-Version`, `Mcp-Method`, and `Mcp-Name` on `tools/call` / `prompts/get` / `resources/read`             |
+| Sessions                  | connection _is_ the session                                     | **removed** — no `Mcp-Session-Id`, no standalone `GET` SSE stream, no `DELETE`, no `Last-Event-ID` resumability. `GET`/`DELETE` answer `405` |
+| Asking the user something | the server pushes an `elicitation/create` request down the pipe | **Multi Round-Trip Request (MRTR)**: the tool answers `resultType: "input_required"` and the client _retries_ the call with `inputResponses` |
+| Security                  | the client owns the process                                     | the server MUST validate the `Origin` header and SHOULD bind to `127.0.0.1`                                                                  |
 
 The header duplication is the interesting part: a proxy or cache can route and cache an MCP request without parsing the JSON body. That only works if header and body agree, so a mismatch is a hard error (`-32020`), never a best guess.
 
@@ -65,7 +65,19 @@ curl -s -X POST http://127.0.0.1:3002/mcp \
 ```
 
 ```json
-{"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","supportedVersions":["2026-07-28"],"capabilities":{"tools":{}},"instructions":"Generates passwords from My Little Pony character names.","ttlMs":3600000,"cacheScope":"public","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"pony-no-sdk-streamable","version":"0.1.0"}}}}
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "resultType": "complete",
+    "supportedVersions": ["2026-07-28"],
+    "capabilities": { "tools": {} },
+    "instructions": "Generates passwords from My Little Pony character names.",
+    "ttlMs": 3600000,
+    "cacheScope": "public",
+    "_meta": { "io.modelcontextprotocol/serverInfo": { "name": "pony-no-sdk-streamable", "version": "0.1.0" } }
+  }
+}
 ```
 
 A modern `tools/call` (note `Mcp-Name`, which names the tool for intermediaries):
@@ -78,7 +90,15 @@ curl -s -X POST http://127.0.0.1:3002/mcp \
 ```
 
 ```json
-{"jsonrpc":"2.0","id":2,"result":{"resultType":"complete","content":[{"type":"text","text":"Rar!tyB!gRa!nb0wDa$hAppl€jack"}],"_meta":{"io.modelcontextprotocol/serverInfo":{"name":"pony-no-sdk-streamable","version":"0.1.0"}}}}
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "resultType": "complete",
+    "content": [{ "type": "text", "text": "Rar!tyB!gRa!nb0wDa$hAppl€jack" }],
+    "_meta": { "io.modelcontextprotocol/serverInfo": { "name": "pony-no-sdk-streamable", "version": "0.1.0" } }
+  }
+}
 ```
 
 The very same endpoint answers a legacy `initialize` — no envelope, no `resultType`, no `serverInfo` `_meta`:
@@ -89,20 +109,28 @@ curl -s -X POST http://127.0.0.1:3002/mcp -H 'Content-Type: application/json' \
 ```
 
 ```json
-{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","serverInfo":{"name":"pony-no-sdk-streamable","version":"0.1.0"},"capabilities":{"tools":{}}}}
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": { "name": "pony-no-sdk-streamable", "version": "0.1.0" },
+    "capabilities": { "tools": {} }
+  }
+}
 ```
 
 The error cases are where Streamable HTTP is most visible, because the HTTP status carries meaning next to the JSON-RPC error code:
 
-| Situation | Response |
-| --- | --- |
-| `MCP-Protocol-Version` header ≠ `_meta` version | `400` + `{"code":-32020,"message":"MCP-Protocol-Version header (2025-11-25) does not match the _meta protocol version (2026-07-28)"}` |
-| `Mcp-Method` header missing | `400` + `{"code":-32020,"message":"Mcp-Method header (absent) does not match the JSON-RPC method (tools/list)"}` |
-| Protocol version we don't implement | `400` + `{"code":-32022,"message":"Unsupported protocol version: 2027-01-01","data":{"supported":["2026-07-28","2025-11-25","2025-06-18","2025-03-26","2024-11-05"],"requested":"2027-01-01"}}` |
-| Unknown method | `404` + `{"code":-32601,"message":"Unsupported method: resources/list"}` |
-| Notification (no `id`) | `202 Accepted`, empty body |
-| `Origin: https://evil.example.com` | `403 Forbidden` (plain text) |
-| `GET /mcp` or `DELETE /mcp` | `405 Method Not Allowed` (plain text) |
+| Situation                                       | Response                                                                                                                                                                                        |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MCP-Protocol-Version` header ≠ `_meta` version | `400` + `{"code":-32020,"message":"MCP-Protocol-Version header (2025-11-25) does not match the _meta protocol version (2026-07-28)"}`                                                           |
+| `Mcp-Method` header missing                     | `400` + `{"code":-32020,"message":"Mcp-Method header (absent) does not match the JSON-RPC method (tools/list)"}`                                                                                |
+| Protocol version we don't implement             | `400` + `{"code":-32022,"message":"Unsupported protocol version: 2027-01-01","data":{"supported":["2026-07-28","2025-11-25","2025-06-18","2025-03-26","2024-11-05"],"requested":"2027-01-01"}}` |
+| Unknown method                                  | `404` + `{"code":-32601,"message":"Unsupported method: resources/list"}`                                                                                                                        |
+| Notification (no `id`)                          | `202 Accepted`, empty body                                                                                                                                                                      |
+| `Origin: https://evil.example.com`              | `403 Forbidden` (plain text)                                                                                                                                                                    |
+| `GET /mcp` or `DELETE /mcp`                     | `405 Method Not Allowed` (plain text)                                                                                                                                                           |
 
 The server always answers with a single JSON object. A server that emits notifications while a call runs (progress, for instance) would instead answer `text/event-stream` and write the notifications followed by the final response as SSE events — which is exactly what Sample 2 does automatically.
 
@@ -126,7 +154,15 @@ npm run start:sdk   # http://127.0.0.1:3000/mcp
 Note that the SDK enforces the full `_meta` envelope, so a hand-written modern request must carry `io.modelcontextprotocol/clientCapabilities` too — omitting it is answered with `-32602` and a precise complaint:
 
 ```json
-{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid _meta envelope for protocol revision 2026-07-28: io.modelcontextprotocol/clientCapabilities: missing","data":{"envelope":{"key":"io.modelcontextprotocol/clientCapabilities","problem":"missing"}}},"id":1}
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32602,
+    "message": "Invalid _meta envelope for protocol revision 2026-07-28: io.modelcontextprotocol/clientCapabilities: missing",
+    "data": { "envelope": { "key": "io.modelcontextprotocol/clientCapabilities", "problem": "missing" } }
+  },
+  "id": 1
+}
 ```
 
 #### Asking the user something: MRTR instead of server-initiated elicitation
@@ -141,7 +177,34 @@ curl -s -X POST http://127.0.0.1:3000/mcp \
 ```
 
 ```json
-{"result":{"resultType":"input_required","inputRequests":{"excludedPonies":{"method":"elicitation/create","params":{"message":"Which ponies to exclude?","requestedSchema":{"type":"object","properties":{"excludedPonies":{"type":"string","title":"Excluded Ponies","description":"List the names of ponies to exclude, separated by commas."}},"required":["excludedPonies"]},"mode":"form"}}},"_meta":{"io.modelcontextprotocol/serverInfo":{"name":"pony-sdk-streamable","version":"0.1.0"}}},"jsonrpc":"2.0","id":2}
+{
+  "result": {
+    "resultType": "input_required",
+    "inputRequests": {
+      "excludedPonies": {
+        "method": "elicitation/create",
+        "params": {
+          "message": "Which ponies to exclude?",
+          "requestedSchema": {
+            "type": "object",
+            "properties": {
+              "excludedPonies": {
+                "type": "string",
+                "title": "Excluded Ponies",
+                "description": "List the names of ponies to exclude, separated by commas."
+              }
+            },
+            "required": ["excludedPonies"]
+          },
+          "mode": "form"
+        }
+      }
+    },
+    "_meta": { "io.modelcontextprotocol/serverInfo": { "name": "pony-sdk-streamable", "version": "0.1.0" } }
+  },
+  "jsonrpc": "2.0",
+  "id": 2
+}
 ```
 
 The client collects the answer and **retries the same call**, now with `inputResponses` attached (and a fresh request id):
@@ -154,7 +217,16 @@ curl -s -X POST http://127.0.0.1:3000/mcp \
 ```
 
 ```json
-{"result":{"resultType":"complete","content":[{"type":"text","text":"LunaFluttershyPinkiePrincess"}],"structuredContent":{"result":"LunaFluttershyPinkiePrincess"},"_meta":{"io.modelcontextprotocol/serverInfo":{"name":"pony-sdk-streamable","version":"0.1.0"}}},"jsonrpc":"2.0","id":3}
+{
+  "result": {
+    "resultType": "complete",
+    "content": [{ "type": "text", "text": "LunaFluttershyPinkiePrincess" }],
+    "structuredContent": { "result": "LunaFluttershyPinkiePrincess" },
+    "_meta": { "io.modelcontextprotocol/serverInfo": { "name": "pony-sdk-streamable", "version": "0.1.0" } }
+  },
+  "jsonrpc": "2.0",
+  "id": 3
+}
 ```
 
 In the tool handler that is a single `async` function that runs twice: `inputResponse(ctx.mcpReq.inputResponses, "excludedPonies")` reports `missing` on the first round (so the handler returns `inputRequired({ inputRequests: { excludedPonies: inputRequired.elicit({...}) } })`), and on the second round `acceptedContent(..., z.object({ excludedPonies: z.string() }))` hands back the validated answer.
@@ -212,7 +284,7 @@ Substitution rules (if enabled): o/O→0, i/I→!, e/E→€, s/S→$.
 >>> Disconnecting...
 ```
 
-Pointed at the no-SDK server the same client shows what a *partial* server looks like from the client side. Sample 1 only implements `tools/list` and `tools/call` with one tool, so every other step fails — which is why each step in the client is wrapped in a small `try`/`catch`:
+Pointed at the no-SDK server the same client shows what a _partial_ server looks like from the client side. Sample 1 only implements `tools/list` and `tools/call` with one tool, so every other step fails — which is why each step in the client is wrapped in a small `try`/`catch`:
 
 ```bash
 npm run start:no-sdk     # in another terminal
@@ -394,4 +466,4 @@ npm run start:sdk       # or npm run start:no-sdk
 npm run inspect:sdk     # or npm run inspect:no-sdk
 ```
 
-`inspect:sdk` passes `--protocol-era modern`. Without it the Inspector connects with the legacy 2025-era `initialize` handshake. The server answers such requests statelessly, so it cannot push `elicitation/create`, and `pony_password_with_preferences` fails with "did not declare the required capability". In the modern era the tool returns `input_required`, the Inspector shows the *Elicitation Request* form, and on *Submit* it retries the call with your answer (MRTR).
+`inspect:sdk` passes `--protocol-era modern`. Without it the Inspector connects with the legacy 2025-era `initialize` handshake. The server answers such requests statelessly, so it cannot push `elicitation/create`, and `pony_password_with_preferences` fails with "did not declare the required capability". In the modern era the tool returns `input_required`, the Inspector shows the _Elicitation Request_ form, and on _Submit_ it retries the call with your answer (MRTR).

@@ -6,27 +6,27 @@ This is a TypeScript port of [`../McpAppsDotnet`](../McpAppsDotnet/README.md), w
 
 Seven steps, one tool (or two) paired with one view each, every step teaching one MCP Apps concept:
 
-| # | Tool(s) | Resource URI | View folder | Teaches |
-|---|---------|---------------|-------------|---------|
-| 1 | `step1-hello` | `ui://step1-hello/app.html` | `src/ui/step1-hello` | **Tool ↔ UI link.** `_meta.ui.resourceUri` joins a tool to a `ui://` resource; `structuredContent` is the typed payload routed to the view. |
-| 2 | `step2-host-context` | `ui://step2-host-context/app.html` | `src/ui/step2-host-context` | **Host context & theming.** The view reads theme/locale/dimensions via `getHostContext()` and re-renders on `onhostcontextchanged`. |
-| 3 | `step3-quote`, `step3-next-quote` (app-only) | `ui://step3-call-tool/app.html` | `src/ui/step3-call-tool` | **View → server calls & app-only tools.** A button calls `step3-next-quote` (`visibility: ["app"]`) — invisible to the model, no conversation turn consumed. |
-| 4 | `step4-talk-to-model` | `ui://step4-talk-to-model/app.html` | `src/ui/step4-talk-to-model` | **Driving the conversation.** `updateModelContext` (silent), `sendMessage` (a user turn), `openLink` (host-mediated navigation). |
-| 5 | `step5-monitor`, `step5-stats` (app-only) | `ui://step5-live-polling/app.html` | `src/ui/step5-live-polling` | **Live polling & lifecycle.** The view polls the app-only `step5-stats` every 2 s and stops on `onteardown`. |
-| 6 | `step6-flag` | `ui://step6-fullscreen-csp/app.html` | `src/ui/step6-fullscreen-csp` | **Display modes & CSP.** `requestDisplayMode("fullscreen")`, and a content-level `_meta.ui.csp.resourceDomains` that lets the sandbox load an external flag image. |
-| 7 | `step7-recipe` | `ui://step7-tool-input/app.html` | `src/ui/step7-tool-input` | **Tool-input timeline & plain resources.** `ontoolinputpartial` → `ontoolinput` → `ontoolresult`, plus `app.readServerResource` reading the plain-text resource `docs://step7/cooking-notes.md`. New in this port, no .NET equivalent. |
+| #   | Tool(s)                                      | Resource URI                         | View folder                   | Teaches                                                                                                                                                                                                                                |
+| --- | -------------------------------------------- | ------------------------------------ | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `step1-hello`                                | `ui://step1-hello/app.html`          | `src/ui/step1-hello`          | **Tool ↔ UI link.** `_meta.ui.resourceUri` joins a tool to a `ui://` resource; `structuredContent` is the typed payload routed to the view.                                                                                            |
+| 2   | `step2-host-context`                         | `ui://step2-host-context/app.html`   | `src/ui/step2-host-context`   | **Host context & theming.** The view reads theme/locale/dimensions via `getHostContext()` and re-renders on `onhostcontextchanged`.                                                                                                    |
+| 3   | `step3-quote`, `step3-next-quote` (app-only) | `ui://step3-call-tool/app.html`      | `src/ui/step3-call-tool`      | **View → server calls & app-only tools.** A button calls `step3-next-quote` (`visibility: ["app"]`) — invisible to the model, no conversation turn consumed.                                                                           |
+| 4   | `step4-talk-to-model`                        | `ui://step4-talk-to-model/app.html`  | `src/ui/step4-talk-to-model`  | **Driving the conversation.** `updateModelContext` (silent), `sendMessage` (a user turn), `openLink` (host-mediated navigation).                                                                                                       |
+| 5   | `step5-monitor`, `step5-stats` (app-only)    | `ui://step5-live-polling/app.html`   | `src/ui/step5-live-polling`   | **Live polling & lifecycle.** The view polls the app-only `step5-stats` every 2 s and stops on `onteardown`.                                                                                                                           |
+| 6   | `step6-flag`                                 | `ui://step6-fullscreen-csp/app.html` | `src/ui/step6-fullscreen-csp` | **Display modes & CSP.** `requestDisplayMode("fullscreen")`, and a content-level `_meta.ui.csp.resourceDomains` that lets the sandbox load an external flag image.                                                                     |
+| 7   | `step7-recipe`                               | `ui://step7-tool-input/app.html`     | `src/ui/step7-tool-input`     | **Tool-input timeline & plain resources.** `ontoolinputpartial` → `ontoolinput` → `ontoolresult`, plus `app.readServerResource` reading the plain-text resource `docs://step7/cooking-notes.md`. New in this port, no .NET equivalent. |
 
 "What you should see" per step, once the tool is called from a host that renders MCP Apps:
 
-| # | What you should see |
-|---|---|
-| 1 | The panel shows a greeting and the current server time, taken straight from `structuredContent`. |
-| 2 | The panel prints theme, display mode, locale, time zone, container dimensions, and safe-area insets, and updates live if you toggle the host's theme. |
-| 3 | The panel shows a quote; clicking "Another one" swaps it for a new one without adding a turn to the conversation. |
-| 4 | Three buttons: "Pin to context" (silent), "Send message" (adds a user turn), "Open via host" (host opens the URL). A status line reports success/failure. |
-| 5 | CPU/memory/uptime update every 2 seconds; closing the panel (or the host tearing it down) stops the polling — check the server log or DevTools, nothing keeps firing after teardown. |
-| 6 | A flag image loads from `flagcdn.com` inside the sandbox; a "Go fullscreen" button appears if the host supports it and toggles the display mode. |
-| 7 | Three panels fill in as the tool call progresses (partial input, if the host streams it; final input; result), and "Show cooking notes" fetches and renders a markdown resource on demand. |
+| #   | What you should see                                                                                                                                                                        |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | The panel shows a greeting and the current server time, taken straight from `structuredContent`.                                                                                           |
+| 2   | The panel prints theme, display mode, locale, time zone, container dimensions, and safe-area insets, and updates live if you toggle the host's theme.                                      |
+| 3   | The panel shows a quote; clicking "Another one" swaps it for a new one without adding a turn to the conversation.                                                                          |
+| 4   | Three buttons: "Pin to context" (silent), "Send message" (adds a user turn), "Open via host" (host opens the URL). A status line reports success/failure.                                  |
+| 5   | CPU/memory/uptime update every 2 seconds; closing the panel (or the host tearing it down) stops the polling — check the server log or DevTools, nothing keeps firing after teardown.       |
+| 6   | A flag image loads from `flagcdn.com` inside the sandbox; a "Go fullscreen" button appears if the host supports it and toggles the display mode.                                           |
+| 7   | Three panels fill in as the tool call progresses (partial input, if the host streams it; final input; result), and "Show cooking notes" fetches and renders a markdown resource on demand. |
 
 ## What are MCP Apps?
 
@@ -59,7 +59,7 @@ Up to `ext-apps` 1.x, the `@modelcontextprotocol/ext-apps/server` helpers (`regi
 
 A sandboxed MCP App view runs under a default-deny CSP (`default-src 'none'` unless the resource opts specific origins in — see the `_meta.ui` table below). It cannot fetch a separate `.js` or `.css` file from anywhere, including from this very server. So every view is bundled into one self-contained HTML document — markup, styles, and script all inlined — using `vite-plugin-singlefile`, and the resource handler ships that HTML verbatim.
 
-`scripts/build-ui.ts` builds each step in its **own** Vite invocation rather than one multi-entry build, because a single multi-entry Rollup build can let several entries share a common chunk that gets emitted as a separate file and *imported* — an external `<script type="module" src="...">` — which defeats the single-file property for exactly the code that CSP would then block. Building each view in isolation sidesteps chunk-sharing entirely, at the cost of running Vite seven times instead of once.
+`scripts/build-ui.ts` builds each step in its **own** Vite invocation rather than one multi-entry build, because a single multi-entry Rollup build can let several entries share a common chunk that gets emitted as a separate file and _imported_ — an external `<script type="module" src="...">` — which defeats the single-file property for exactly the code that CSP would then block. Building each view in isolation sidesteps chunk-sharing entirely, at the cost of running Vite seven times instead of once.
 
 Views are re-read from `dist/ui/<step>/index.html` on every `resources/read` unless `NODE_ENV=production` — see [Differences to McpAppsDotnet](#differences-to-mcpappsdotnet) for why.
 
@@ -101,15 +101,15 @@ The endpoint is `http://localhost:3001/mcp`; `http://localhost:3001/health` is a
 
 ## `_meta.ui` reference
 
-| Where | Key | Purpose |
-|-------|-----|---------|
-| Tool (`tools/list`) | `ui.resourceUri` | Link the tool to its `ui://` view. |
-| Tool (`tools/list`) | `ui.visibility: ["app"]` | Hide from the model; still callable from the view via `app.callServerTool`. |
-| Resource content (`resources/read`) | `ui.csp.resourceDomains` | Whitelist origins for `<img>`/`<script>`/`<link>`/fonts/media (`img-src`/`script-src`/…). |
-| Resource content (`resources/read`) | `ui.csp.connectDomains` | Whitelist `fetch`/XHR/WebSocket targets (`connect-src`). |
-| Resource content (`resources/read`) | `ui.csp.frameDomains` / `ui.csp.baseUriDomains` | Whitelist nested frames / `<base>` URIs. |
-| Resource content (`resources/read`) | `ui.permissions` | Request sandbox permissions (`camera`, `microphone`, …). |
-| Resource content (`resources/read`) | `ui.prefersBorder` | Cosmetic hint — a **direct** field of `ui`, **not** under a `preferences` wrapper. Nesting it under a made-up wrapper would not error; the host would just silently drop it. |
+| Where                               | Key                                             | Purpose                                                                                                                                                                      |
+| ----------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tool (`tools/list`)                 | `ui.resourceUri`                                | Link the tool to its `ui://` view.                                                                                                                                           |
+| Tool (`tools/list`)                 | `ui.visibility: ["app"]`                        | Hide from the model; still callable from the view via `app.callServerTool`.                                                                                                  |
+| Resource content (`resources/read`) | `ui.csp.resourceDomains`                        | Whitelist origins for `<img>`/`<script>`/`<link>`/fonts/media (`img-src`/`script-src`/…).                                                                                    |
+| Resource content (`resources/read`) | `ui.csp.connectDomains`                         | Whitelist `fetch`/XHR/WebSocket targets (`connect-src`).                                                                                                                     |
+| Resource content (`resources/read`) | `ui.csp.frameDomains` / `ui.csp.baseUriDomains` | Whitelist nested frames / `<base>` URIs.                                                                                                                                     |
+| Resource content (`resources/read`) | `ui.permissions`                                | Request sandbox permissions (`camera`, `microphone`, …).                                                                                                                     |
+| Resource content (`resources/read`) | `ui.prefersBorder`                              | Cosmetic hint — a **direct** field of `ui`, **not** under a `preferences` wrapper. Nesting it under a made-up wrapper would not error; the host would just silently drop it. |
 
 MIME type for every view resource: `text/html;profile=mcp-app`.
 

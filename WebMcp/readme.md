@@ -6,15 +6,15 @@ A web page that offers **tools to AI agents running in the browser**, using the 
 
 WebMCP is a proposed web standard from the W3C **Web Machine Learning Community Group** (editors from Microsoft and Google). A page registers tools in JavaScript, and an agent built into the browser (or a browser extension) can discover and call them while the user is looking at the page.
 
-| | MCP server (day 2–4) | WebMCP (this sample) |
-|---|---|---|
-| Where tools run | Separate process (stdio) or HTTP service | JavaScript inside the open web page |
-| Host / client | Claude, VS Code, MCP Inspector … | The browser's agent (or an extension) |
-| Transport | JSON-RPC over stdio / Streamable HTTP | None, the browser calls the function directly |
-| Auth | OAuth 2.1 (day 4) | The user's existing session in the page |
-| UI | None (or MCP Apps in an iframe) | The tools update the page the user sees |
-| Human in the loop | Up to the host | Built in: the user watches the page, declarative forms wait for the user |
-| Discovery | Configured in the host | Only while the page is open in a tab |
+|                   | MCP server (day 2–4)                     | WebMCP (this sample)                                                     |
+| ----------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
+| Where tools run   | Separate process (stdio) or HTTP service | JavaScript inside the open web page                                      |
+| Host / client     | Claude, VS Code, MCP Inspector …         | The browser's agent (or an extension)                                    |
+| Transport         | JSON-RPC over stdio / Streamable HTTP    | None, the browser calls the function directly                            |
+| Auth              | OAuth 2.1 (day 4)                        | The user's existing session in the page                                  |
+| UI                | None (or MCP Apps in an iframe)          | The tools update the page the user sees                                  |
+| Human in the loop | Up to the host                           | Built in: the user watches the page, declarative forms wait for the user |
+| Discovery         | Configured in the host                   | Only while the page is open in a tab                                     |
 
 WebMCP borrows MCP's tool concept (name, description, JSON Schema input, annotations) but is **not** the MCP protocol. Resources and prompts don't exist in WebMCP.
 
@@ -31,12 +31,12 @@ WebMCP borrows MCP's tool concept (name, description, JSON Schema input, annotat
 
 Four tools, each teaching one WebMCP concept:
 
-| Tool | Kind | Annotation | Teaches |
-|------|------|------------|---------|
-| `pony_password` | imperative ([`src/main.ts`](src/main.ts)) | `readOnlyHint` | **Registering a tool.** `document.modelContext.registerTool({ name, description, inputSchema, execute })`. The tool generates a password and **shows it on the page**. |
-| `list_vault_entries` | imperative | `readOnlyHint` | **The page decides what an agent sees.** Returns only the *labels* of saved passwords, never the passwords themselves. |
-| `clear_vault` | imperative | `consequentialHint` | **Human in the loop for irreversible actions.** The annotation tells the agent host to ask first, and the page itself asks again with `confirm()`. |
-| `save_password` | declarative ([`index.html`](index.html)) | – | **Forms as tools.** A plain `<form toolname="…" tooldescription="…">`; the browser derives the input schema from the named controls and their `toolparamdescription`. Without `toolautosubmit` the agent can only *fill* the form, and the call completes when the **user** clicks *Save* (`event.agentInvoked`, `event.respondWith(...)`). |
+| Tool                 | Kind                                      | Annotation          | Teaches                                                                                                                                                                                                                                                                                                                                     |
+| -------------------- | ----------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pony_password`      | imperative ([`src/main.ts`](src/main.ts)) | `readOnlyHint`      | **Registering a tool.** `document.modelContext.registerTool({ name, description, inputSchema, execute })`. The tool generates a password and **shows it on the page**.                                                                                                                                                                      |
+| `list_vault_entries` | imperative                                | `readOnlyHint`      | **The page decides what an agent sees.** Returns only the _labels_ of saved passwords, never the passwords themselves.                                                                                                                                                                                                                      |
+| `clear_vault`        | imperative                                | `consequentialHint` | **Human in the loop for irreversible actions.** The annotation tells the agent host to ask first, and the page itself asks again with `confirm()`.                                                                                                                                                                                          |
+| `save_password`      | declarative ([`index.html`](index.html))  | –                   | **Forms as tools.** A plain `<form toolname="…" tooldescription="…">`; the browser derives the input schema from the named controls and their `toolparamdescription`. Without `toolautosubmit` the agent can only _fill_ the form, and the call completes when the **user** clicks _Save_ (`event.agentInvoked`, `event.respondWith(...)`). |
 
 Two more pieces make the sample usable today:
 
@@ -82,11 +82,11 @@ Things to try in the agent simulator:
 - `pony_password` with `{"minLength": 24, "special": true}`: the password appears in the page and in the activity log.
 - `save_password` with `{"label": "Netflix", "password": "RarityDashSpike"}`: the form gets filled and the call waits. Click **Save**, and the simulator receives `{"saved":"Netflix"}`.
 - `pony_password` with `{"minLength": 1000000000}`: the browser does **not** validate tool input against `inputSchema`, so the page clamps the value to 64 itself.
-- `list_vault_entries`, then `clear_vault`. The page asks you for confirmation, and if you decline, the tool returns `{"cleared":false,"reason":"…"}`. It deliberately does not throw: the browser replaces error messages with a generic *Tool execution failed*, so the agent would never learn that the user said no.
+- `list_vault_entries`, then `clear_vault`. The page asks you for confirmation, and if you decline, the tool returns `{"cleared":false,"reason":"…"}`. It deliberately does not throw: the browser replaces error messages with a generic _Tool execution failed_, so the agent would never learn that the user said no.
 
 ## Try it with a real browser agent (Chrome)
 
-The agent simulator only shows the mechanics. To let a real LLM drive the tools, use Google's **Example Agentic Chrome Extension** ([GoogleChromeLabs/webmcp-extension](https://github.com/GoogleChromeLabs/webmcp-extension)). It works with OpenAI, Gemini, Anthropic or a local Ollama model. (The alternative, the *Model Context Tool Inspector* from the Chrome Web Store, only supports Gemini.)
+The agent simulator only shows the mechanics. To let a real LLM drive the tools, use Google's **Example Agentic Chrome Extension** ([GoogleChromeLabs/webmcp-extension](https://github.com/GoogleChromeLabs/webmcp-extension)). It works with OpenAI, Gemini, Anthropic or a local Ollama model. (The alternative, the _Model Context Tool Inspector_ from the Chrome Web Store, only supports Gemini.)
 
 ### Who talks to whom
 
@@ -166,10 +166,10 @@ cd WebMcp
 npm run dev
 ```
 
-- Open `http://localhost:5173` in Chrome. The badge must say **Native WebMCP ✔**. If it says *polyfill*, the flag from step 1 is not active.
+- Open `http://localhost:5173` in Chrome. The badge must say **Native WebMCP ✔**. If it says _polyfill_, the flag from step 1 is not active.
 - Open the extension's **side panel** from the toolbar icon, and click **Got it** the first time.
-- Try: *"Generate a 20-character pony password with special characters and save it as Netflix."* The password appears on the page and the form gets filled in. `save_password` has no `readOnlyHint`, so the extension asks first (**Allow** / **Don't allow**, while *Sensitive action alerts* is on). Then you confirm with **Save**.
-- Try: *"Clear my vault."* `clear_vault` is annotated `consequentialHint: true`, so the extension shows a *This action may be irreversible* card (**Cancel** / **Allow**), and then the page itself asks again.
+- Try: _"Generate a 20-character pony password with special characters and save it as Netflix."_ The password appears on the page and the form gets filled in. `save_password` has no `readOnlyHint`, so the extension asks first (**Allow** / **Don't allow**, while _Sensitive action alerts_ is on). Then you confirm with **Save**.
+- Try: _"Clear my vault."_ `clear_vault` is annotated `consequentialHint: true`, so the extension shows a _This action may be irreversible_ card (**Cancel** / **Allow**), and then the page itself asks again.
 
 So during the demo **three things run at the same time**: the helper server (terminal 1), this page (terminal 3), and Chrome with the extension. Terminal 2 is only needed for building.
 
