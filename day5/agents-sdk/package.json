@@ -13,7 +13,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^26.6.6",
+    "@types/node": "^26.6.11",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },
@@ -23,7 +23,7 @@
     "better-sqlite3": "^13.2.0",
     "chalk": "^6.0.1",
     "dotenv": "^18.0.10",
-    "openai": "^7.60.0",
+    "openai": "^7.65.0",
     "zod": "^4.6.7"
   }
 }
